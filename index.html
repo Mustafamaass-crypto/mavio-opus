@@ -393,6 +393,14 @@ body.in .talk{z-index:22}
 }
 
 .dock{display:none!important}.intern-only{display:none!important}
+
+/* ===== Sprachsteuerung „Mavio …“ ===== */
+#voiceBtn{position:relative}#voiceBtn .vx{display:none}#voiceBtn.off .vx{display:inline}#voiceBtn.off{opacity:.55}
+#voiceBtn.on::after{content:"";position:absolute;top:7px;right:7px;width:7px;height:7px;border-radius:50%;background:var(--accent);box-shadow:0 0 8px var(--accent)}
+#voiceBtn.wake{border-color:var(--accent);box-shadow:0 0 0 3px rgba(var(--red),.25),0 0 22px rgba(var(--red),.45)}
+.vpill{position:fixed;z-index:60;left:50%;top:calc(env(safe-area-inset-top,0px) + 76px);transform:translate(-50%,-10px);opacity:0;pointer-events:none;transition:.3s;
+  background:rgba(13,12,11,.92);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);border:1px solid var(--line);border-radius:999px;padding:10px 18px;font-size:13px;max-width:calc(100vw - 40px);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.vpill.on{opacity:1;transform:translate(-50%,0)}.vpill b{color:var(--accent);font-weight:500;letter-spacing:.2em;text-transform:uppercase;font-size:10px;margin-right:10px}
 </style></head>
 <body class="v3">
 <div class="layer" id="amb" aria-hidden="true"></div>
@@ -411,6 +419,7 @@ body.in .talk{z-index:22}
   <button class="iconbtn" id="menuBtn" aria-label="Alle Reiter"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><path d="M4 8h16M4 16h16"/></svg></button>
   <div class="logo"><div class="mk" id="mk" aria-label="Mavio Opus"></div><span class="tag">MAVIO OPUS</span></div>
   <div class="right">
+    <button class="iconbtn" id="voiceBtn" aria-label="Sprachsteuerung „Mavio“" title="Sprachsteuerung – sag „Mavio …“" hidden><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><path d="M12 3a3 3 0 0 1 3 3v6a3 3 0 0 1-6 0V6a3 3 0 0 1 3-3z"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/><path class="vx" d="M4 4l16 16"/></svg></button>
     <button class="iconbtn" id="musicBtn" aria-label="Musik an/aus" title="Musik an/aus"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><path d="M4 9h4l5-4v14l-5-4H4z"/><path class="w" d="M16.5 8.5a5 5 0 0 1 0 7M19 6a8.5 8.5 0 0 1 0 12"/><path class="x" d="M17 9l5 6M22 9l-5 6"/></svg></button>
     
     <button class="iconbtn rightonly" id="searchBtn" aria-label="Suchen"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><circle cx="11" cy="11" r="6.5"/><path d="M20 20l-4.2-4.2"/></svg></button>
@@ -985,4 +994,54 @@ return {kunde:s=>kunde(s),search,searchEnter,setMode,get mode(){return MODE;}};
 })();
 </script>
 
+<div class="vpill" id="vpill" role="status"></div>
+<script>
+/* ================= Sprachsteuerung: „Mavio, …“ ================= */
+(function(){
+const SR=window.SpeechRecognition||window.webkitSpeechRecognition,btn=document.getElementById('voiceBtn'),pill=document.getElementById('vpill');
+if(!SR||!btn)return;btn.hidden=false;
+let on=true,rec=null,running=false,awakeUntil=0,pillT=null,lastCmd='',lastAt=0;
+try{on=localStorage.getItem('mo-stimme')!=='aus';}catch(e){}
+const WAKE=/\b(mavio|mavi|mavio's|maveo|mabio|navio|mario|marvio|maviu|may vio|ma vio)\b[,.!:]?/i;
+function show(label,text,ms){pill.innerHTML=`<b>${label}</b>${text||''}`;pill.classList.add('on');clearTimeout(pillT);pillT=setTimeout(()=>pill.classList.remove('on'),ms||2200);}
+function ui(){btn.classList.toggle('off',!on);btn.classList.toggle('on',on&&running);btn.classList.toggle('wake',Date.now()<awakeUntil);}
+const norm=s=>s.toLowerCase().normalize('NFC').replace(/[.,!?]/g,' ').replace(/\s+/g,' ').trim();
+const SLIDES=[[/(start|anfang|übersicht|startseite|mavio opus|willkommen|home)/,0],[/referenz/,1],[/material/,2],[/gestalt|design/,3],[/investor/,4],[/ablauf|so arbeiten/,5],[/komplett/,6],[/standard/,7],[/kontakt|termin vereinbaren|telefon/,8]];
+function slideIdx(t){for(const [re,i] of SLIDES){if(re.test(t)){const k=S.findIndex(s=>re.test(s.k.toLowerCase())||re.test((s.sub||'').toLowerCase()));return k>=0?k:i;}}return -1;}
+function music(cmd){const pk=document.getElementById('mpick');if(!pk)return false;
+  if(/musik (aus|stopp|stop|leise)|(stopp|stop|aus) (die )?musik|ruhe/.test(cmd)){const b=pk.querySelector('button[data-k="aus"]');b&&b.click();show('Mavio','Musik aus');return true;}
+  if(/(nächste|andere|neue|weiter)[sn]? (lied|musik|stück|song)|(lied|stück|song) weiter/.test(cmd)){const L=[...pk.querySelectorAll('button[data-k]')].filter(b=>b.dataset.k!=='aus');const i=L.findIndex(b=>b.getAttribute('aria-pressed')==='true');const n=L[(i+1)%L.length];n&&n.click();show('Musik',n?n.querySelector('b').textContent:'');return true;}
+  if(/musik (an|ein|start|spielen)|spiel(e)? musik/.test(cmd)){let k='';try{k=localStorage.getItem('mo-stueck')||'';}catch(e){}const b=pk.querySelector(`button[data-k="${k}"]`)||pk.querySelector('button[data-k]:not([data-k="aus"])');b&&b.click();show('Mavio','Musik an');return true;}
+  return false;}
+function run(cmd){cmd=norm(cmd);if(!cmd)return false;const now=Date.now();if(cmd===lastCmd&&now-lastAt<1200)return true;
+  if(music(cmd)){lastCmd=cmd;lastAt=now;return true;}
+  let did='';
+  if(/(schließ|schliess|zu machen|zumachen|ausblenden|weg damit|zurück zur seite)/.test(cmd)){closeAll();try{closeMenu();}catch(e){}did='Geschlossen';}
+  else if(/(nach rechts|rechts|weiter|nächste|vor\b|vorwärts)/.test(cmd)){closeAll();go(Math.round(tgt)+1);did='Weiter';}
+  else if(/(nach links|links|zurück|vorherige|davor)/.test(cmd)){closeAll();go(Math.round(tgt)-1);did='Zurück';}
+  else if(/(erste|anfang)\b/.test(cmd)&&!/öffne|zeig/.test(cmd)){closeAll();go(0);did='Start';}
+  else if(/letzte/.test(cmd)){closeAll();go(S.length-1);did=S[S.length-1].k;}
+  else if(/(alle reiter|menü|menu|übersicht aller)/.test(cmd)){document.getElementById('menuBtn').click();did='Alle Reiter';}
+  else{const k=slideIdx(cmd);if(k>=0){closeAll();try{closeMenu();}catch(e){}go(k);did=S[k].k;
+      if(/(öffne|öffnen|aufmachen|mach .* auf|zeig|details|mehr)/.test(cmd))setTimeout(()=>{try{openDetail(S[k]);}catch(e){}},900);}}
+  if(did){lastCmd=cmd;lastAt=now;show('Mavio',did);return true;}
+  return false;}
+function handle(text,final){const t=norm(text);const m=t.match(WAKE);
+  if(m){const rest=t.slice(m.index+m[0].length).trim();awakeUntil=Date.now()+7000;ui();
+    if(rest){if(final){if(!run(rest))show('Nicht verstanden','„'+rest+'“',2600);awakeUntil=0;ui();}else show('Mavio hört',rest,4000);}
+    else show('Mavio hört zu','Sag z. B. „nach rechts“ oder „öffne Ablauf“',7000);return;}
+  if(Date.now()<awakeUntil){if(final){if(!run(t))show('Nicht verstanden','„'+t+'“',2600);awakeUntil=0;ui();}else show('Mavio hört',t,4000);}}
+function start(){if(!on||running)return;try{rec=new SR();rec.lang='de-DE';rec.continuous=true;rec.interimResults=true;rec.maxAlternatives=1;
+  rec.onresult=e=>{for(let i=e.resultIndex;i<e.results.length;i++){handle(e.results[i][0].transcript,e.results[i].isFinal);}};
+  rec.onstart=()=>{running=true;ui();};
+  rec.onend=()=>{running=false;ui();if(on)setTimeout(start,400);};
+  rec.onerror=e=>{if(e.error==='not-allowed'||e.error==='service-not-allowed'){on=false;ui();show('Mikrofon','Bitte das Mikrofon für diese Seite erlauben',4500);}};
+  rec.start();}catch(e){}}
+function stop(){try{rec&&rec.stop();}catch(e){}running=false;ui();}
+btn.onclick=e=>{e.stopPropagation();on=!on;try{localStorage.setItem('mo-stimme',on?'an':'aus');}catch(x){}if(on){start();show('Mavio','Sprachsteuerung an – sag „Mavio …“',3200);}else{stop();show('Mavio','Sprachsteuerung aus');}};
+/* Browser verlangen einmal eine Berührung, bevor das Mikrofon starten darf */
+const kick=()=>{if(on&&!running)start();};['pointerdown','keydown','touchstart'].forEach(t=>addEventListener(t,kick,{capture:true,passive:true}));
+setInterval(ui,500);start();
+})();
+</script>
 </body></html>
