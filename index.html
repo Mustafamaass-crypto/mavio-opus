@@ -1,0 +1,988 @@
+<!doctype html>
+<html lang="de"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Mavio Opus</title>
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="icon" type="image/png" href="icon-512.png">
+<meta name="apple-mobile-web-app-title" content="Mavio Opus">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="theme-color" content="#070707">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@200;300;400;500;700&family=Bodoni+Moda:ital,opsz,wght@0,6..96,400..900;1,6..96,400..900&family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;1,400;1,500&display=swap">
+<style>
+:root{--bg:#060606;--bgrgb:6,6,6;--ink:#f2efe9;--dim:#a9a49c;--line:rgba(242,239,233,.2);--accent:#d8d2c6;--lightc:255,244,228;
+  --rf:grayscale(1) contrast(1.1) brightness(.55);--ff:grayscale(1) contrast(1.06);--serif:'Cormorant Garamond',Garamond,Georgia,serif;--sans:'Manrope','Helvetica Neue',Arial,sans-serif;color-scheme:dark}
+*{box-sizing:border-box}
+html,body{height:100%;margin:0}
+body{background:var(--bg);color:var(--ink);font-family:var(--sans);overflow:hidden;-webkit-font-smoothing:antialiased;touch-action:pan-y;user-select:none;-webkit-user-select:none}
+button{font:inherit;color:inherit}
+:focus-visible{outline:2px solid var(--accent);outline-offset:3px}
+img{max-width:none;-webkit-user-drag:none}
+
+/* Ebenen */
+.layer{position:fixed;inset:0;pointer-events:none}
+#amb,#rooms,#panels,#portal,#reveal{display:none}
+.rm{position:absolute;inset:0;overflow:hidden;will-change:transform,opacity}
+.rm i{position:absolute;inset:-8%;background:center/cover no-repeat;filter:var(--rf);will-change:transform}
+#amb .rm i{filter:saturate(.7) brightness(.4) blur(26px)}
+#reveal .rm i{filter:grayscale(1) contrast(1.15) brightness(1.05)}
+#reveal{-webkit-mask-image:radial-gradient(34vmax 30vmax at var(--lx,50%) var(--ly,40%),#000 0%,rgba(0,0,0,.5) 45%,transparent 75%);mask-image:radial-gradient(34vmax 30vmax at var(--lx,50%) var(--ly,40%),#000 0%,rgba(0,0,0,.5) 45%,transparent 75%)}
+#portal{position:fixed;overflow:hidden;box-shadow:0 0 0 1px rgba(255,255,255,.14),0 40px 120px rgba(0,0,0,.7);z-index:1}
+#portal::after{content:"";position:absolute;inset:0;background:linear-gradient(180deg,rgba(0,0,0,0) 55%,rgba(0,0,0,.6));pointer-events:none}
+.pn{position:absolute;overflow:hidden;will-change:transform}
+.pn i{position:absolute;inset:-4% -18%;background:center/cover no-repeat}
+.shade{position:fixed;inset:0;pointer-events:none;z-index:2;background:linear-gradient(180deg,rgba(var(--bgrgb),.55) 0%,rgba(var(--bgrgb),0) 22%,rgba(var(--bgrgb),0) 55%,rgba(var(--bgrgb),.85) 100%)}
+#figs{z-index:3}
+#floor{position:fixed;z-index:2;pointer-events:none;border-radius:50%;background:radial-gradient(closest-side,rgba(0,0,0,.7),rgba(0,0,0,.35) 55%,transparent);display:none}
+body.v3 #floor{display:block}
+.fg{position:absolute;left:0;top:0;will-change:transform,opacity;pointer-events:auto;cursor:pointer}
+.fg img{display:block;width:100%;height:100%;object-fit:contain;filter:var(--ff) drop-shadow(0 30px 40px rgba(0,0,0,.65))}
+.fg.gold img{filter:saturate(1.05) contrast(1.05) drop-shadow(0 30px 40px rgba(0,0,0,.7)) drop-shadow(0 0 30px rgba(214,170,80,.18))}
+.fg::after{content:"";position:absolute;left:8%;right:8%;bottom:-3%;height:7%;border-radius:50%;background:radial-gradient(closest-side,rgba(0,0,0,.6),transparent);z-index:-1}
+#dust{position:fixed;inset:0;z-index:4;pointer-events:none}
+.light{position:fixed;inset:0;z-index:4;pointer-events:none;mix-blend-mode:screen;background:radial-gradient(36vmax 30vmax at var(--lx,50%) var(--ly,35%),rgba(var(--lightc),calc(.10 + var(--pulse,0)*.2)),rgba(var(--lightc),0) 70%)}
+.sweep{position:fixed;inset:-20% -40%;z-index:4;pointer-events:none;mix-blend-mode:screen;background:linear-gradient(100deg,transparent 40%,rgba(var(--lightc),.12) 50%,transparent 60%);transform:translateX(var(--sw,-120%))}
+
+/* Kopf */
+.top{position:fixed;left:0;right:0;top:0;z-index:20;padding:calc(env(safe-area-inset-top,0px) + 14px) max(20px,env(safe-area-inset-right,0px),env(safe-area-inset-left,0px)) 0;display:grid;grid-template-columns:minmax(0,1fr) auto minmax(0,1fr);align-items:start;pointer-events:none}
+.top>*{pointer-events:auto}
+.iconbtn{width:46px;height:46px;border:1px solid var(--line);border-radius:14px;background:rgba(var(--bgrgb),.35);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);display:grid;place-items:center;cursor:pointer}
+.iconbtn:hover{border-color:var(--accent)}
+.logo{display:flex;flex-direction:column;align-items:center;gap:6px}
+.logo .mk{width:54px;height:54px;color:#ff0a26;--gap:var(--bg);position:relative;isolation:isolate}
+.logo .mk svg{position:absolute;inset:0;width:100%;height:100%}
+.logo .mk svg.ol{filter:drop-shadow(0 6px 12px rgba(0,0,0,.5))}
+.logo .mk::before{content:"";position:absolute;inset:-70%;z-index:-1;border-radius:50%;background:radial-gradient(closest-side,rgba(255,255,255,.55),rgba(255,255,255,.18) 45%,transparent 75%);filter:blur(10px);animation:halo 6s ease-in-out infinite}
+@keyframes halo{0%,100%{opacity:.7;transform:scale(.94)}50%{opacity:1;transform:scale(1.06)}}
+.logo .tag{display:none}
+/* Schriftzug quer über den Bildschirm, leuchtend */
+#wm{position:fixed;z-index:5;left:max(28px,4vw);right:max(28px,4vw);top:0;display:flex;justify-content:space-between;align-items:center;pointer-events:none;
+  font-family:var(--sans);font-weight:300;font-size:clamp(20px,2.6vw,44px);line-height:1;color:#fffaf2;
+  text-shadow:0 0 8px rgba(255,248,236,.85),0 0 22px rgba(255,236,214,.55),0 0 48px rgba(255,220,200,.3);animation:wmglow 5s ease-in-out infinite;transform:translateY(-50%)}
+#wm i{font-style:normal}#wm b{width:1.4em}
+@keyframes wmglow{0%,100%{opacity:.82}50%{opacity:1}}
+/* Musik */
+#musicBtn.off svg .w{display:none}#musicBtn:not(.off) svg .x{display:none}
+#mpick{position:fixed;z-index:45;top:calc(env(safe-area-inset-top,0px) + 70px);right:max(20px,env(safe-area-inset-right,0px));width:min(320px,calc(100vw - 40px));background:rgba(13,12,11,.92);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);border:1px solid var(--line);border-radius:18px;padding:10px;display:flex;flex-direction:column;gap:4px;opacity:0;transform:translateY(-8px);pointer-events:none;transition:opacity .3s,transform .3s}
+#mpick.open{opacity:1;transform:none;pointer-events:auto}
+#mpick{max-height:calc(100dvh - 100px);overflow:auto}#mpick button{padding:8px 10px}
+#mpick .cr{font-size:9.5px;line-height:1.4;color:var(--dim);opacity:.7;padding:8px 10px 4px}
+#mpick .h{font-size:10px;letter-spacing:.35em;text-transform:uppercase;color:var(--dim);padding:8px 10px 6px}
+#mpick button{display:flex;align-items:center;gap:12px;text-align:left;border:1px solid transparent;border-radius:12px;background:none;padding:10px;cursor:pointer}
+#mpick button:hover{border-color:var(--line)}
+#mpick button b{display:block;font-weight:500;font-size:14px}#mpick button small{display:block;font-size:11px;color:var(--dim);margin-top:2px}
+#mpick button i{flex:0 0 10px;width:10px;height:10px;border-radius:50%;border:1px solid var(--dim)}
+#mpick button[aria-pressed="true"] i{background:var(--accent);border-color:var(--accent);box-shadow:0 0 10px var(--accent)}
+/* rote, leuchtende Schlange */
+.fg img.ov{position:absolute;inset:0;filter:drop-shadow(0 0 3px rgba(255,10,38,.28))}
+.right{justify-self:end;display:flex;gap:10px;align-items:center}
+.switch{display:flex;align-items:center;gap:2px;padding:4px;border:1px solid var(--line);border-radius:999px;background:rgba(var(--bgrgb),.4);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px)}
+.switch span{font-size:10px;letter-spacing:.3em;text-transform:uppercase;color:var(--dim);padding:0 8px 0 10px}
+.switch button{width:32px;height:32px;border-radius:999px;border:none;background:none;cursor:pointer;font-size:13px;font-weight:700}
+.switch button[aria-pressed="true"]{background:var(--ink);color:var(--bg)}
+.vname{position:fixed;z-index:21;left:50%;top:calc(env(safe-area-inset-top,0px) + 96px);transform:translateX(-50%);font-size:10px;letter-spacing:.4em;text-transform:uppercase;color:var(--accent);opacity:0;transition:opacity .6s;pointer-events:none;white-space:nowrap}
+.vname.on{opacity:1}
+
+/* Beschriftung */
+#cap{position:fixed;z-index:10;display:flex;flex-direction:column;gap:10px;pointer-events:none}
+#cap>*{pointer-events:auto}
+#cap .num{font-size:11px;letter-spacing:.4em;text-transform:uppercase;color:var(--accent)}
+#cap h1{margin:0;font-family:var(--serif);font-weight:300;font-size:clamp(34px,4.6vw,76px);line-height:.95;letter-spacing:.01em}
+#cap p{margin:0;font-size:14px;line-height:1.65;color:var(--dim);max-width:380px}
+#cap button{align-self:flex-start;border:none;border-bottom:1px solid var(--accent);background:none;padding:6px 0;font-size:11px;letter-spacing:.32em;text-transform:uppercase;cursor:pointer;color:var(--ink)}
+.rise>*{animation:rise .9s cubic-bezier(.2,.7,.2,1) both}
+.rise>*:nth-child(2){animation-delay:.07s}.rise>*:nth-child(3){animation-delay:.14s}.rise>*:nth-child(4){animation-delay:.21s}
+@keyframes rise{from{opacity:0;transform:translateY(18px)}to{opacity:1;transform:none}}
+
+/* Navigation */
+.bars{position:fixed;z-index:12;left:50%;transform:translateX(-50%);bottom:calc(env(safe-area-inset-bottom,0px) + 84px);display:flex;gap:6px;width:min(560px,calc(100vw - 48px))}
+.bars button{flex:1;padding:8px 0;background:none;border:none;cursor:pointer}
+.bars button i{display:block;height:2px;background:var(--line);transition:background .4s}
+.bars button.on i{background:var(--accent)}
+.navb{position:fixed;z-index:12;top:50%;transform:translateY(-50%);width:52px;height:52px;border-radius:999px;border:1px solid var(--line);background:rgba(var(--bgrgb),.3);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);display:grid;place-items:center;cursor:pointer}
+.navb:hover{border-color:var(--accent)}
+.navb.prev{left:max(20px,env(safe-area-inset-left,0px))}.navb.next{right:max(20px,env(safe-area-inset-right,0px))}
+.talk{position:fixed;z-index:18;white-space:nowrap;left:50%;transform:translateX(-50%);bottom:calc(env(safe-area-inset-bottom,0px) + 20px);display:flex;align-items:center;gap:10px;padding:6px 6px 6px 20px;border:1px solid var(--line);border-radius:999px;background:rgba(var(--bgrgb),.5);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);cursor:pointer;font-size:13px;font-weight:500;letter-spacing:.06em}
+.talk .b{width:36px;height:36px;border-radius:999px;display:grid;place-items:center;border:1px solid var(--line)}
+.talk .b.mic{background:var(--ink);border-color:var(--ink);color:var(--bg)}
+.talk:hover{border-color:var(--accent)}
+
+/* Flächen */
+.scrim{position:fixed;inset:0;z-index:35;background:rgba(0,0,0,.5);opacity:0;pointer-events:none;transition:opacity .4s}
+.scrim.on{opacity:1;pointer-events:auto}
+.sheet{position:fixed;z-index:40;left:0;right:0;bottom:0;max-height:84%;overflow:auto;background:#0d0c0b;border-top:1px solid var(--line);border-radius:26px 26px 0 0;padding:16px max(26px,env(safe-area-inset-right,0px)) calc(env(safe-area-inset-bottom,0px) + 28px) max(26px,env(safe-area-inset-left,0px));transform:translateY(105%);transition:transform .6s cubic-bezier(.2,.8,.2,1);display:flex;flex-direction:column;gap:16px;user-select:text;-webkit-user-select:text}
+.sheet.open{transform:none}
+.grip{align-self:center;width:44px;height:4px;border-radius:4px;background:var(--line)}
+.sheet h2{margin:0;font-family:var(--serif);font-weight:300;font-size:clamp(32px,4.6vw,58px);line-height:1}
+.row{display:flex;justify-content:space-between;align-items:center;gap:16px}
+.idx{font-size:11px;letter-spacing:.38em;text-transform:uppercase;color:var(--accent)}
+.close{border:1px solid var(--line);background:none;border-radius:999px;padding:11px 18px;font-size:11px;letter-spacing:.3em;text-transform:uppercase;cursor:pointer}
+.cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:14px}
+.card{border:1px solid var(--line);border-radius:18px;overflow:hidden;display:flex;flex-direction:column}
+.card .pic{aspect-ratio:16/10;position:relative;overflow:hidden;background:#111}
+.card .pic i{position:absolute;inset:0;background:center/cover;filter:grayscale(1) brightness(.5)}
+.card .pic img{position:absolute;left:50%;bottom:6%;transform:translateX(-50%);height:82%;width:auto;filter:grayscale(1)}
+.card .tx{padding:14px 16px;display:flex;flex-direction:column;gap:6px}
+.card .tx strong{font-size:16px;font-weight:500}
+.card .tx small{font-size:11px;letter-spacing:.2em;text-transform:uppercase;color:var(--dim)}
+.hint{font-size:12px;color:var(--dim)}
+.chatline{display:flex;gap:10px}
+.chatline input{flex:1;min-width:0;height:54px;border-radius:999px;border:1px solid var(--line);background:transparent;color:var(--ink);padding:0 22px;font:inherit;font-size:15px;outline:none}
+.chatline input:focus{border-color:var(--accent)}
+.chatline button{width:54px;height:54px;border-radius:999px;border:1px solid var(--line);background:none;display:grid;place-items:center;cursor:pointer}
+.chatline button.mic{background:var(--ink);color:var(--bg)}
+.menu{position:fixed;inset:0;z-index:50;background:#0b0a09;display:flex;flex-direction:column;overflow:auto;padding:calc(env(safe-area-inset-top,0px) + 26px) max(36px,env(safe-area-inset-right,0px)) 40px max(36px,env(safe-area-inset-left,0px));clip-path:inset(0 0 100% 0);transition:clip-path .7s cubic-bezier(.7,0,.2,1)}
+.menu.open{clip-path:inset(0)}
+.menu ol{list-style:none;margin:28px 0 0;padding:0;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px}
+.menu li button{width:100%;height:170px;border:1px solid var(--line);border-radius:18px;cursor:pointer;position:relative;overflow:hidden;background:#111;display:flex;align-items:flex-end;padding:16px;font-family:var(--serif);font-size:24px;font-weight:300;text-align:left}
+.menu li button i{position:absolute;inset:0;background:center/cover;filter:grayscale(1) brightness(.4);transition:filter .4s}
+.menu li button img{position:absolute;right:10px;bottom:8px;height:80%;width:auto;filter:grayscale(1) drop-shadow(0 10px 14px rgba(0,0,0,.6))}
+.menu li button span{position:relative}
+.menu li button:hover i{filter:grayscale(1) brightness(.6)}
+
+/* =============== 1 · GALERIE – Raum wandert mit =============== */
+body.v1{--accent:#e6dccb;--lightc:255,240,220;--rf:grayscale(1) contrast(1.12) brightness(.58)}
+body.v1 #rooms{display:block}
+body.v1 #cap{left:max(48px,env(safe-area-inset-left,0px));bottom:calc(env(safe-area-inset-bottom,0px) + 130px);max-width:min(420px,34vw)}
+
+/* =============== 2 · DURCHGANG – man geht durch die Räume =============== */
+body.v2{--bg:#0b0405;--bgrgb:11,4,5;--accent:#c4243a;--lightc:255,225,215;--rf:grayscale(1) contrast(1.15) brightness(.5);--serif:'Bodoni Moda',Didot,Georgia,serif}
+body.v2 #rooms{display:block}
+body.v2 .shade{background:radial-gradient(120% 90% at 50% 50%,rgba(0,0,0,0) 40%,rgba(11,4,5,.85) 100%),linear-gradient(180deg,rgba(11,4,5,.5),rgba(11,4,5,0) 25%,rgba(11,4,5,0) 60%,rgba(11,4,5,.9))}
+body.v2 #cap{left:50%;transform:translateX(-50%);top:calc(env(safe-area-inset-top,0px) + 118px);align-items:center;text-align:center;width:min(760px,90vw)}
+body.v2 #cap h1{font-style:italic;font-weight:400;font-size:clamp(30px,4vw,64px)}
+body.v2 #cap p{max-width:460px}
+body.v2 #cap button{align-self:center}
+body.v2 #cap .num::after{content:"";display:block;width:40px;height:1px;background:var(--accent);margin:12px auto 0}
+
+/* =============== 3 · PORTAL – Raum im Bogen =============== */
+body.v3{--bg:#070707;--bgrgb:7,7,7;--accent:#ff1e3c;--red:255,30,60;--lightc:255,244,232;--rf:saturate(1.08) contrast(1.06) brightness(.82);--serif:'Bodoni Moda',Didot,Georgia,serif}
+body.v3 #portal{box-shadow:0 0 0 1px rgba(255,255,255,.16),0 40px 120px rgba(0,0,0,.75)}
+body.v3 #amb::after{content:"";position:absolute;inset:0;background:linear-gradient(180deg,rgba(7,7,7,.2),rgba(7,7,7,.5))}
+body.v3 #cap h1{font-style:italic;font-weight:400}
+body.v3 #cap .num::after{content:"";display:block;width:40px;height:1px;background:var(--accent);margin-top:12px}
+body.v3 .talk .b.mic{background:var(--accent);border-color:var(--accent);color:#fff}
+body.v3 #amb,body.v3 #portal{display:block}
+body.v3 .shade{background:linear-gradient(180deg,rgba(7,7,7,.6),rgba(7,7,7,0) 30%,rgba(7,7,7,0) 70%,rgba(7,7,7,.92))}
+body.v3 #cap{right:max(100px,env(safe-area-inset-right,0px));top:50%;transform:translateY(-50%);width:min(400px,27vw)}
+body.v3 #cap h1{font-size:clamp(30px,3.6vw,64px);hyphens:auto;-webkit-hyphens:auto;overflow-wrap:break-word}
+body.v3 .mirror-line{display:block}
+
+/* =============== 4 · PANORAMA – Räume nebeneinander =============== */
+body.v4{--bg:#0a0907;--bgrgb:10,9,7;--accent:#b99a62;--lightc:255,232,196;--serif:'Cormorant Garamond',Garamond,Georgia,serif}
+body.v4 #panels{display:block}
+body.v4 .shade{background:linear-gradient(180deg,rgba(10,9,7,.4),rgba(10,9,7,0) 20%,rgba(10,9,7,0) 72%,rgba(10,9,7,.95))}
+body.v4 .pn{box-shadow:0 30px 80px rgba(0,0,0,.6);border:1px solid rgba(185,154,98,.25)}
+body.v4 #cap{left:50%;transform:translateX(-50%);bottom:calc(env(safe-area-inset-bottom,0px) + 128px);flex-direction:row;align-items:baseline;gap:22px;width:auto;white-space:nowrap}
+body.v4 #cap p{display:none}
+body.v4 #cap h1{font-size:clamp(26px,2.6vw,42px)}
+
+/* =============== 5 · LICHTKEGEL – Raum wird nur im Licht sichtbar =============== */
+body.v5{--bg:#030303;--bgrgb:3,3,3;--accent:#ffffff;--lightc:255,250,240;--rf:grayscale(1) contrast(1.1) brightness(.2);--sans:'Manrope',Arial,sans-serif}
+body.v5 #rooms,body.v5 #reveal{display:block}
+body.v5 #cap{left:max(100px,env(safe-area-inset-left,0px));top:50%;transform:translateY(-50%);max-width:min(520px,40vw)}
+body.v5 #cap h1{font-family:'Manrope',sans-serif;font-weight:200;text-transform:uppercase;letter-spacing:.12em;font-size:clamp(30px,4.4vw,76px);line-height:1}
+body.v5 #cap .ini{font-family:'Bodoni Moda',serif;font-style:italic;font-size:120px;line-height:.7;color:transparent;-webkit-text-stroke:1px rgba(255,255,255,.55)}
+#cap .ini{display:none}
+body.v5 #cap .ini{display:block}
+body.v5 .light{background:radial-gradient(30vmax 26vmax at var(--lx,50%) var(--ly,35%),rgba(var(--lightc),calc(.06 + var(--pulse,0)*.2)),rgba(var(--lightc),0) 70%)}
+
+.bgrid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}
+.bt{aspect-ratio:4/3;max-width:100%;border-radius:16px;display:grid;place-items:center;overflow:hidden;border:1px solid var(--line)}
+.bt img{width:52%;max-height:80%;object-fit:contain}
+.dl{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:10px}
+.dl button{display:flex;justify-content:space-between;align-items:center;gap:12px;text-align:left;border:1px solid var(--line);border-radius:14px;background:none;padding:14px 16px;cursor:pointer;transition:border-color .3s}
+.dl button:hover{border-color:var(--accent)}
+.dl button b{font-weight:500;font-size:14px}.dl button small{display:block;font-size:11px;color:var(--dim);margin-top:3px}
+.dl button i{font-style:normal;font-size:10px;letter-spacing:.2em;text-transform:uppercase;color:var(--accent);white-space:nowrap}
+.dl button.main{grid-column:1 / -1;background:rgba(255,255,255,.04)}
+@media (max-width:760px){.bgrid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media (orientation:portrait) and (min-width:761px) and (max-width:1199px) and (min-aspect-ratio:0) {
+  body.v3 #cap{left:max(64px,env(safe-area-inset-left,0px));right:max(64px,env(safe-area-inset-right,0px));top:auto;transform:none;bottom:calc(env(safe-area-inset-bottom,0px) + 140px);width:auto;max-width:640px}
+  body.v3 #cap h1{font-size:56px}
+  .navb{top:auto;bottom:calc(env(safe-area-inset-bottom,0px) + 18px);transform:none}
+}
+@media (min-width:1800px){#cap p{font-size:17px;max-width:460px}#cap .num{font-size:13px}#cap button{font-size:13px}.talk{font-size:16px;padding:8px 8px 8px 26px}.talk .b{width:44px;height:44px}.iconbtn{width:56px;height:56px}.logo .mk{width:66px;height:66px}.logo .tag{font-size:12px}.bars{width:min(700px,40vw)}}
+/* Handy hochkant */
+@media (max-width:760px){
+  .logo .mk{width:42px;height:42px}.logo .tag{display:none}
+  .switch span{display:none}.switch button{width:27px;height:27px;font-size:12px}
+  .top{grid-template-columns:minmax(0,1fr) auto minmax(0,1fr);gap:10px}.logo{justify-self:center}
+  .navb{display:none}
+  .vname{top:calc(env(safe-area-inset-top,0px) + 72px)}
+  .bars{bottom:calc(env(safe-area-inset-bottom,0px) + 76px)}
+  #cap p{display:none}
+  body.v1 #cap,body.v3 #cap,body.v5 #cap{left:max(24px,env(safe-area-inset-left,0px));right:max(24px,env(safe-area-inset-right,0px));top:auto;transform:none;bottom:calc(env(safe-area-inset-bottom,0px) + 116px);max-width:none;width:auto}
+  body.v2 #cap{top:calc(env(safe-area-inset-top,0px) + 120px)}
+  body.v4 #cap{flex-direction:column;align-items:center;gap:6px;white-space:normal}
+  body.v5 #cap .ini{display:none}
+  body.v4 #cap{bottom:calc(env(safe-area-inset-bottom,0px) + 118px)}
+  #cap h1{font-size:34px}
+  .menu ol{grid-template-columns:repeat(2,minmax(0,1fr))}.menu li button{height:130px;font-size:19px}
+  .rightonly{display:none}
+}
+@media (orientation:landscape) and (max-height:540px){
+  .logo .mk{width:36px;height:36px}.logo .tag{display:none}
+  .bars{display:none}.vname{display:none}
+  .talk{left:auto;right:max(24px,env(safe-area-inset-right,0px));transform:none;bottom:calc(env(safe-area-inset-bottom,0px) + 10px);font-size:11px}
+  #cap p{display:none}
+  body.v1 #cap{bottom:calc(env(safe-area-inset-bottom,0px) + 30px)}
+  body.v4 #cap{bottom:calc(env(safe-area-inset-bottom,0px) + 16px);left:max(30px,env(safe-area-inset-left,0px));transform:none}
+  body.v2 #cap{top:auto;bottom:calc(env(safe-area-inset-bottom,0px) + 60px)}
+  #cap h1{font-size:30px}
+}
+@media (prefers-reduced-motion:reduce){.rise>*,.logo .mk::before{animation:none}}
+/* ===== Umschalter Kunden | Intern – versteckt unten ===== */
+.dock{position:fixed;z-index:24;left:50%;bottom:0;transform:translateX(-50%);display:flex;flex-direction:column;align-items:center;pointer-events:none}
+.dgrip{pointer-events:auto;width:64px;height:calc(env(safe-area-inset-bottom,0px) + 16px);border:none;background:none;cursor:pointer;display:flex;align-items:flex-start;justify-content:center;padding-top:7px}
+.dgrip i{display:block;width:30px;height:3px;border-radius:3px;background:rgba(242,239,233,.22);transition:background .3s,width .3s}
+.dgrip:hover i,.dock.open .dgrip i{background:rgba(242,239,233,.55);width:38px}
+.dpanel{pointer-events:none;position:absolute;left:50%;bottom:0;transform:translate(-50%,110%);transition:transform .45s cubic-bezier(.2,.8,.2,1);display:flex;align-items:center;gap:14px;white-space:nowrap;padding:14px 16px calc(env(safe-area-inset-bottom,0px) + 22px) 22px;background:rgba(13,12,11,.94);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);border:1px solid var(--line);border-bottom:none;border-radius:20px 20px 0 0}
+.dock.open .dpanel{transform:translate(-50%,0);pointer-events:auto}
+.dpanel>span{font-size:9.5px;letter-spacing:.35em;text-transform:uppercase;color:var(--dim)}
+.dock.open .dgrip{position:relative;z-index:2}
+.mode{display:flex;gap:2px;padding:3px;border:1px solid var(--line);border-radius:999px}
+.mode button{border:none;background:none;cursor:pointer;border-radius:999px;padding:8px 16px;font-size:10px;letter-spacing:.28em;text-transform:uppercase;color:var(--dim);font-weight:500}
+.mode button[aria-pressed="true"]{background:var(--accent);color:#fff}
+body.in #cap,body.in .bars,body.in .navb,body.in #wm,body.in #figs,body.in #floor,body.in #portal{visibility:hidden}
+body.in #menuBtn{visibility:hidden}
+.lead{margin:0;color:var(--dim);font-size:15px;line-height:1.7;max-width:640px}
+/* ===== Kunden-Inhalte ===== */
+.chips{display:flex;gap:8px;flex-wrap:wrap}
+.chips button{border:1px solid var(--line);background:none;border-radius:999px;padding:9px 15px;font-size:11px;letter-spacing:.2em;text-transform:uppercase;cursor:pointer;color:var(--dim)}
+.chips button[aria-pressed="true"]{border-color:var(--accent);color:var(--ink);background:rgba(var(--red),.12)}
+.gal{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:16px;margin-top:16px}
+.tile{border:1px solid var(--line);border-radius:18px;overflow:hidden;background:#0b0b0b;cursor:pointer;display:flex;flex-direction:column;text-align:left;padding:0}
+.tile .ph{aspect-ratio:4/3;background:#151311 center/cover;position:relative}
+.tile .ph.empty{display:grid;place-items:center;color:var(--dim);font-family:var(--serif);font-style:italic;font-size:22px}
+.tile .ph em{position:absolute;left:12px;top:12px;font-style:normal;font-size:9px;letter-spacing:.3em;text-transform:uppercase;background:rgba(0,0,0,.6);padding:5px 9px;border-radius:999px}
+.tile .tx{padding:14px 16px 16px;display:flex;flex-direction:column;gap:5px}
+.tile .tx strong{font-family:var(--serif);font-weight:400;font-size:22px;font-style:italic}
+.tile .tx small{font-size:10.5px;letter-spacing:.22em;text-transform:uppercase;color:var(--dim)}
+.tile .tx span{font-size:13px;color:var(--dim);line-height:1.55}
+.steps{list-style:none;margin:8px 0 0;padding:0;display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:14px;counter-reset:st}
+.steps li{border:1px solid var(--line);border-radius:18px;padding:20px;counter-increment:st;display:flex;flex-direction:column;gap:8px}
+.steps li::before{content:counter(st,decimal-leading-zero);font-family:var(--serif);font-size:34px;color:var(--accent);line-height:1}
+.steps b{font-weight:500;font-size:16px}.steps span{font-size:13px;color:var(--dim);line-height:1.6}
+.kbig{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:14px}
+.kbig a,.kbig div{border:1px solid var(--line);border-radius:18px;padding:22px;text-decoration:none;color:var(--ink);display:flex;flex-direction:column;gap:6px}
+.kbig small{font-size:10px;letter-spacing:.3em;text-transform:uppercase;color:var(--accent)}
+.kbig b{font-family:var(--serif);font-weight:400;font-size:24px}
+.empty-note{border:1px dashed var(--line);border-radius:18px;padding:26px;color:var(--dim);font-size:13px;line-height:1.6}
+.sub2{margin:22px 0 4px;font-size:11px;letter-spacing:.35em;text-transform:uppercase;color:var(--accent)}
+/* Großansicht */
+.lb{position:fixed;inset:0;z-index:70;background:rgba(0,0,0,.94);display:flex;align-items:center;justify-content:center}
+.lb[hidden]{display:none}
+.lb figure{margin:0;max-width:92vw;max-height:88vh;display:flex;flex-direction:column;align-items:center;gap:12px}
+.lb img{max-width:92vw;max-height:80vh;object-fit:contain;border-radius:6px}
+.lb figcaption{font-size:12px;letter-spacing:.2em;text-transform:uppercase;color:var(--dim);text-align:center}
+.lbx,.lbn{position:absolute;border:1px solid var(--line);background:rgba(0,0,0,.5);color:var(--ink);border-radius:999px;width:50px;height:50px;font-size:22px;cursor:pointer}
+.lbx{top:calc(env(safe-area-inset-top,0px) + 18px);right:20px;font-size:16px}
+.lbn.prev{left:16px;top:50%;transform:translateY(-50%)}.lbn.next{right:16px;top:50%;transform:translateY(-50%)}
+/* PIN */
+.pinline{display:flex;gap:10px}
+.pinline input{flex:1;min-width:0;height:56px;border-radius:16px;border:1px solid var(--line);background:transparent;color:var(--ink);font-size:24px;letter-spacing:.5em;text-align:center;outline:none}
+.pinline input:focus{border-color:var(--accent)}
+/* ===== INTERN ===== */
+.intern{position:fixed;inset:0;z-index:19;display:none;grid-template-columns:230px 1fr;gap:0;padding-top:calc(env(safe-area-inset-top,0px) + 90px);background:linear-gradient(180deg,rgba(7,7,7,.94),rgba(7,7,7,.985) 30%);user-select:text;-webkit-user-select:text}
+body.in .intern{display:grid}
+body.in .talk{z-index:22}
+.inav{overflow:auto;padding:8px 14px 120px max(18px,env(safe-area-inset-left,0px));display:flex;flex-direction:column;gap:2px;border-right:1px solid var(--line)}
+.inav .grp{font-size:9.5px;letter-spacing:.35em;text-transform:uppercase;color:var(--dim);padding:16px 12px 6px}
+.inav button{display:flex;align-items:center;justify-content:space-between;gap:10px;border:none;background:none;text-align:left;padding:10px 12px;border-radius:12px;cursor:pointer;font-size:14px;color:var(--dim)}
+.inav button:hover{color:var(--ink);background:rgba(255,255,255,.04)}
+.inav button[aria-current="true"]{color:var(--ink);background:rgba(var(--red),.13);box-shadow:inset 2px 0 0 var(--accent)}
+.inav button i{font-style:normal;font-size:11px;min-width:22px;text-align:center;padding:2px 7px;border-radius:999px;background:rgba(255,255,255,.07);color:var(--dim)}
+.imain{overflow:auto;padding:6px max(28px,env(safe-area-inset-right,0px)) 130px 32px}
+.ihead{display:flex;justify-content:space-between;align-items:flex-end;gap:16px;flex-wrap:wrap;margin-bottom:20px}
+.ihead h2{margin:4px 0 0;font-family:var(--serif);font-weight:400;font-style:italic;font-size:clamp(30px,3.4vw,52px);line-height:1}
+.iacts{display:flex;gap:8px;flex-wrap:wrap}
+.ibtn{border:1px solid var(--line);background:none;border-radius:999px;padding:10px 18px;font-size:11px;letter-spacing:.22em;text-transform:uppercase;cursor:pointer;color:var(--ink);white-space:nowrap}
+.ibtn:hover{border-color:var(--accent)}
+.ibtn.red{background:var(--accent);border-color:var(--accent);color:#fff}
+.ibtn.sm{padding:7px 12px;font-size:10px}
+.ibtn.ghost{border-color:transparent;color:var(--dim)}
+.istore{font-size:11px;color:var(--dim);margin-top:30px}
+.igrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:14px}
+.ic{border:1px solid var(--line);border-radius:18px;padding:16px 18px;background:rgba(255,255,255,.025);display:flex;flex-direction:column;gap:7px;cursor:pointer;text-align:left;color:var(--ink);position:relative;min-width:0}
+.ic:hover{border-color:rgba(var(--red),.6)}
+.ic b{font-size:16px;font-weight:500;overflow-wrap:anywhere}
+.ic small{font-size:12px;color:var(--dim);line-height:1.5;overflow-wrap:anywhere}
+.ic .meta{display:flex;gap:6px;flex-wrap:wrap}
+.tag{font-size:9.5px;letter-spacing:.2em;text-transform:uppercase;padding:4px 9px;border-radius:999px;border:1px solid var(--line);color:var(--dim);white-space:nowrap}
+.tag.red{border-color:rgba(var(--red),.6);color:#ff8a98}
+.tag.ok{border-color:rgba(80,200,140,.5);color:#8fe0b4}
+.ic .thumb{height:120px;border-radius:12px;background:#151311 center/cover;margin:-4px -6px 4px}
+.isec{margin-top:26px}
+.isec>h3{margin:0 0 12px;font-size:11px;letter-spacing:.35em;text-transform:uppercase;color:var(--accent);font-weight:500;display:flex;justify-content:space-between;align-items:center;gap:10px}
+.ilist{display:flex;flex-direction:column;gap:8px}
+.irow{display:flex;align-items:center;gap:14px;border:1px solid var(--line);border-radius:14px;padding:12px 14px;background:rgba(255,255,255,.02);cursor:pointer;min-width:0}
+.irow:hover{border-color:rgba(var(--red),.6)}
+.irow .d{flex:0 0 auto;min-width:64px;font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--accent)}
+.irow .m{flex:1;min-width:0}.irow .m b{display:block;font-weight:500;font-size:14px;overflow-wrap:anywhere}.irow .m small{display:block;font-size:12px;color:var(--dim);overflow-wrap:anywhere}
+.irow input[type=checkbox]{width:20px;height:20px;accent-color:var(--accent);flex:0 0 auto}
+.irow.done .m b{text-decoration:line-through;color:var(--dim)}
+.prio{width:10px;height:10px;border-radius:50%;flex:0 0 auto}
+.p1{background:#34B36C}.p2{background:#F2BE1A}.p3{background:#F07A22}.p4{background:#E33A44}
+.kpis{display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:12px}
+.kpi{border:1px solid var(--line);border-radius:16px;padding:14px 16px}
+.kpi small{display:block;font-size:10px;letter-spacing:.25em;text-transform:uppercase;color:var(--dim)}
+.kpi b{display:block;font-family:var(--serif);font-size:28px;font-weight:400;margin-top:4px}
+.kpi b.red{color:var(--accent)}
+.dl2{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:10px 22px}
+.dl2 div small{display:block;font-size:10px;letter-spacing:.25em;text-transform:uppercase;color:var(--dim)}
+.dl2 div span{display:block;font-size:15px;margin-top:3px;overflow-wrap:anywhere;white-space:pre-wrap}
+.dl2 a{color:var(--ink)}
+.files{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px}
+.fi{border:1px solid var(--line);border-radius:14px;overflow:hidden;background:#0d0c0b;display:flex;flex-direction:column;position:relative;min-width:0}
+.fi .pv{aspect-ratio:4/3;background:#151311 center/cover;display:grid;place-items:center;color:var(--dim);font-size:12px;letter-spacing:.2em;cursor:pointer;border:none;width:100%}
+.fi .nm{padding:8px 10px;font-size:11px;color:var(--dim);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.fi .nm b{color:var(--ink);font-weight:500;display:block;font-size:10px;letter-spacing:.2em;text-transform:uppercase}
+.fi .rm{position:absolute;top:6px;right:6px;width:28px;height:28px;border-radius:999px;border:1px solid var(--line);background:rgba(0,0,0,.65);color:var(--ink);cursor:pointer;font-size:12px}
+.kalk{width:100%;border-collapse:collapse;font-size:13px}
+.kalk th{text-align:left;font-size:9.5px;letter-spacing:.25em;text-transform:uppercase;color:var(--dim);font-weight:500;padding:6px 6px;border-bottom:1px solid var(--line)}
+.kalk td{padding:4px 4px;border-bottom:1px solid rgba(242,239,233,.07);vertical-align:middle}
+.kalk input,.kalk select{width:100%;min-width:0;background:transparent;border:1px solid transparent;border-radius:8px;color:var(--ink);font:inherit;padding:7px 6px;outline:none}
+.kalk input:focus{border-color:var(--accent);background:rgba(255,255,255,.03)}
+.kalk td.n,.kalk th.n{text-align:right}.kalk td.n input{text-align:right}
+.kalk .x{border:none;background:none;color:var(--dim);cursor:pointer;font-size:14px;padding:6px}
+.kwrap{overflow:auto;border:1px solid var(--line);border-radius:16px;padding:6px 8px}
+.sum{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:10px;margin-top:12px}
+/* Formular */
+.iform{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px 16px}
+.iform label{display:flex;flex-direction:column;gap:6px;font-size:10px;letter-spacing:.25em;text-transform:uppercase;color:var(--dim);min-width:0}
+.iform label.w{grid-column:1/-1}
+.iform input,.iform select,.iform textarea{background:transparent;border:1px solid var(--line);border-radius:12px;color:var(--ink);font:inherit;font-size:15px;letter-spacing:0;text-transform:none;padding:12px 14px;outline:none;min-width:0;width:100%}
+.iform select option{background:#111}
+.iform textarea{min-height:110px;resize:vertical}
+.iform input:focus,.iform select:focus,.iform textarea:focus{border-color:var(--accent)}
+.iform label.ck{flex-direction:row;align-items:center;gap:10px;font-size:13px;letter-spacing:.02em;text-transform:none;color:var(--ink)}
+.iform label.ck input{width:20px;height:20px;accent-color:var(--accent)}
+.iform .fbar{grid-column:1/-1;display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-top:6px}
+.iform .note{grid-column:1/-1;font-size:12px;color:var(--dim);letter-spacing:0;text-transform:none}
+.upl{display:flex;gap:8px;align-items:center;flex-wrap:wrap;letter-spacing:0;text-transform:none}
+.upl select{width:auto}
+.hits{display:flex;flex-direction:column;gap:8px}
+#iBody .bgrid{margin-bottom:14px}#iBody #dlHint{display:block;margin-top:12px}
+.toast{position:fixed;z-index:80;left:50%;bottom:calc(env(safe-area-inset-bottom,0px) + 92px);transform:translate(-50%,20px);opacity:0;pointer-events:none;background:#141210;border:1px solid var(--line);border-radius:999px;padding:11px 20px;font-size:13px;transition:.35s}
+.toast.on{opacity:1;transform:translate(-50%,0)}
+@media (max-width:900px){
+  .intern{grid-template-columns:1fr;grid-template-rows:auto 1fr;padding-top:calc(env(safe-area-inset-top,0px) + 74px)}
+  .inav{flex-direction:row;overflow-x:auto;overflow-y:hidden;border-right:none;border-bottom:1px solid var(--line);padding:4px 16px 10px;gap:6px;scrollbar-width:none}
+  .inav::-webkit-scrollbar{display:none}
+  .inav .grp{display:none}
+  .inav button{flex:0 0 auto;border:1px solid var(--line);border-radius:999px;padding:8px 14px;font-size:13px}
+  .inav button[aria-current="true"]{box-shadow:none;border-color:var(--accent)}
+  .inav button i{display:none}
+  .imain{padding:16px 18px 130px}
+  .iform{grid-template-columns:1fr}
+}
+
+.upl select,.iform select{appearance:none;-webkit-appearance:none;background:rgba(255,255,255,.03) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M1 1l4 4 4-4' fill='none' stroke='%23a9a49c' stroke-width='1.4'/%3E%3C/svg%3E") no-repeat right 12px center;padding-right:30px;border:1px solid var(--line);border-radius:10px;color:var(--ink);font:inherit;font-size:12px;padding-top:7px;padding-bottom:7px;padding-left:10px}
+.iform select{font-size:15px;padding:12px 34px 12px 14px;border-radius:12px}
+@media (max-width:760px){
+  .kalk thead{display:none}
+  .kalk,.kalk tbody{display:block}
+  .kalk tr{display:grid;grid-template-columns:1fr 1fr 1fr 30px;grid-template-areas:"b b b x" "m e p p" "s s s s";gap:2px 6px;padding:8px 2px;border-bottom:1px solid var(--line)}
+  .kalk td{border:none;padding:0}
+  .kalk td:nth-child(1){grid-area:b}.kalk td:nth-child(2){grid-area:m}.kalk td:nth-child(3){grid-area:e}.kalk td:nth-child(4){grid-area:p}.kalk td:nth-child(5){grid-area:s;text-align:right;color:var(--accent);padding:2px 6px}.kalk td:nth-child(6){grid-area:x}
+  .kalk td input{border-color:var(--line)}
+  .kalk td:nth-child(2) input::placeholder{color:var(--dim)}
+}
+
+.dock{display:none!important}.intern-only{display:none!important}
+</style></head>
+<body class="v3">
+<div class="layer" id="amb" aria-hidden="true"></div>
+<div class="layer" id="rooms" aria-hidden="true"></div>
+<div class="layer" id="panels" aria-hidden="true"></div>
+<div id="portal" aria-hidden="true"></div>
+<div class="layer" id="reveal" aria-hidden="true"></div>
+<div class="shade" aria-hidden="true"></div>
+<div id="floor" aria-hidden="true"></div>
+<div class="layer" id="figs"></div>
+<canvas id="dust" aria-hidden="true"></canvas>
+<div class="light" aria-hidden="true"></div>
+<div class="sweep" aria-hidden="true"></div>
+
+<div class="top">
+  <button class="iconbtn" id="menuBtn" aria-label="Alle Reiter"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><path d="M4 8h16M4 16h16"/></svg></button>
+  <div class="logo"><div class="mk" id="mk" aria-label="Mavio Opus"></div><span class="tag">MAVIO OPUS</span></div>
+  <div class="right">
+    <button class="iconbtn" id="musicBtn" aria-label="Musik an/aus" title="Musik an/aus"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><path d="M4 9h4l5-4v14l-5-4H4z"/><path class="w" d="M16.5 8.5a5 5 0 0 1 0 7M19 6a8.5 8.5 0 0 1 0 12"/><path class="x" d="M17 9l5 6M22 9l-5 6"/></svg></button>
+    
+    <button class="iconbtn rightonly" id="searchBtn" aria-label="Suchen"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><circle cx="11" cy="11" r="6.5"/><path d="M20 20l-4.2-4.2"/></svg></button>
+  </div>
+</div>
+
+<div id="wm" aria-hidden="true"><i>M</i><i>A</i><i>V</i><i>I</i><i>O</i><b></b><i>O</i><i>P</i><i>U</i><i>S</i></div>
+<audio id="music" loop preload="auto"></audio>
+<div id="mpick" role="dialog" aria-label="Musik wählen"><span class="h">Musik im Hintergrund</span></div>
+<div id="cap" aria-live="polite"></div>
+<button class="navb prev" id="prev" aria-label="Zurück"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M15 5l-7 7 7 7"/></svg></button>
+<button class="navb next" id="next" aria-label="Weiter"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M9 5l7 7-7 7"/></svg></button>
+<div class="bars" id="bars"></div>
+<button class="talk" id="talkBtn" aria-label="Mit dem Board sprechen">Mit dem Board sprechen
+  <span class="b" aria-hidden="true"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 20h4L19 9l-4-4L4 16v4z"/></svg></span>
+  <span class="b mic" aria-hidden="true"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 3a3 3 0 0 1 3 3v6a3 3 0 0 1-6 0V6a3 3 0 0 1 3-3z"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg></span>
+</button>
+
+<div class="dock" id="dock"><button class="dgrip" id="dGrip" aria-label="Ansicht wechseln" aria-expanded="false"><i></i></button><div class="dpanel" id="dPanel"><span>Ansicht</span><div class="mode" role="group" aria-label="Ansicht"><button type="button" data-m="kunden" aria-pressed="true">Kunden</button><button type="button" data-m="intern" aria-pressed="false">Intern</button></div></div></div>
+<div class="scrim" id="scrim"></div>
+<section class="sheet" id="detail" aria-label="Reiter-Details">
+  <div class="grip"></div>
+  <div class="row"><span class="idx" id="dIdx"></span><button class="close" data-close>Schließen</button></div>
+  <h2 id="dTitle"></h2><p class="lead" id="dText"></p>
+  <div id="dBody"></div>
+</section>
+<!-- Großansicht für Fotos -->
+<div class="lb" id="lb" hidden><button class="lbx" id="lbX" aria-label="Schließen">✕</button><button class="lbn prev" id="lbP" aria-label="Zurück">‹</button><figure><img id="lbImg" alt=""><figcaption id="lbCap"></figcaption></figure><button class="lbn next" id="lbN" aria-label="Weiter">›</button></div>
+<!-- PIN -->
+<section class="sheet pinsheet" id="pinSheet" aria-label="Intern entsperren">
+  <div class="grip"></div>
+  <div class="row"><span class="idx">Intern</span><button class="close" data-close>Abbrechen</button></div>
+  <h2>PIN eingeben</h2>
+  <form id="pinForm" class="pinline"><input id="pinIn" type="password" inputmode="numeric" pattern="[0-9]*" maxlength="8" autocomplete="off" placeholder="••••" aria-label="PIN"><button class="ibtn red" type="submit">Öffnen</button></form>
+  <span class="hint" id="pinHint">So sehen Kunden deinen internen Bereich nicht.</span>
+</section>
+<!-- INTERN -->
+<section class="intern" id="intern" aria-label="Interner Bereich">
+  <aside class="inav" id="inav"></aside>
+  <main class="imain"><div class="ihead"><div><span class="idx" id="iSub"></span><h2 id="iTitle"></h2></div><div class="iacts" id="iActs"></div></div><div id="iBody"></div><div class="istore" id="iStore"></div></main>
+</section>
+<!-- Formular -->
+<section class="sheet" id="ied" aria-label="Bearbeiten">
+  <div class="grip"></div>
+  <div class="row"><span class="idx" id="iedSub"></span><button class="close" data-close>Schließen</button></div>
+  <h2 id="iedTitle"></h2>
+  <form id="iedForm" class="iform" novalidate></form>
+</section>
+<div class="toast" id="toast" role="status"></div>
+<section class="sheet" id="chat" aria-label="Mit dem Board sprechen">
+  <div class="grip"></div>
+  <div class="row"><span class="idx">Sprechen wir.</span><button class="close" data-close>Schließen</button></div>
+  <h2>Frag dein Board.</h2>
+  <div class="chatline">
+    <input id="ask" placeholder="Zum Beispiel: Wo liegt die Gewerbeanmeldung?" autocomplete="off">
+    <button aria-label="Schreiben" id="writeBtn"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 20h4L19 9l-4-4L4 16v4z"/></svg></button>
+    <button class="mic" aria-label="Mikrofon" id="micBtn"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 3a3 3 0 0 1 3 3v6a3 3 0 0 1-6 0V6a3 3 0 0 1 3-3z"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg></button>
+  </div>
+  <div id="hits" class="hits"></div>
+  <span class="hint" id="chatHint">Tippe einen Namen, Kunden, Auftrag oder Reiter – das Board springt direkt dorthin.</span>
+</section>
+<section class="sheet" id="brand" aria-label="Marke und Logo-Dateien">
+  <div class="grip"></div>
+  <div class="row"><span class="idx">Marke · Version 1 · 29.10.2026</span><button class="close" data-close>Schließen</button></div>
+  <h2>MAVIO OPUS · Marke</h2>
+  <div class="bgrid">
+    <div class="bt" style="background:radial-gradient(circle at 50% 35%,#2c2521,#0e0c0a)"><img src="marke/MavioOpus_gestapelt_creme.svg" alt="Logo gestapelt"></div>
+    <div class="bt" style="background:#fff"><img src="marke/MavioOpus_quer_schwarz.svg" alt="Logo quer" style="width:80%"></div>
+    <div class="bt" style="background:radial-gradient(circle at 50% 35%,#2c2521,#0e0c0a)"><img src="marke/MavioOpus_zeichen_creme_kontur.svg" alt="Zeichen"></div>
+    <div class="bt"><img src="marke/MavioOpus_Profilbild_1080_dunkel.png" alt="Profilbild" style="width:100%;height:100%;object-fit:cover;max-height:none"></div>
+  </div>
+  <div class="dl" id="dlList"></div>
+  <span class="hint" id="dlHint">Platzhalter in [eckigen Klammern] (Nachname, Telefon, Adresse, Bank) ersetze ich, sobald du mir die Daten gibst.</span>
+</section>
+<nav class="menu" id="menu" aria-label="Alle Reiter">
+  <div class="row"><span class="idx">Alle Reiter</span><button class="close" data-close-menu>Schließen</button></div>
+  <ol id="menuList"></ol>
+</nav>
+
+<script src="marks.js"></script>
+<script>
+/* Reihenfolge: Kerberos zuerst, danach immer abwechselnd – das einzige eckige Motiv (Gold-Relief) steht zwischen frei stehenden Figuren. */
+const S=[
+ {k:'Mavio Opus',kind:'start',sub:'Willkommen',L:'M',d:'Ankauf, Projektierung, Sanierung und Verkauf. Jede Wohnung ein Einzelstück.',fig:'kerberos.png',room:'raum1.jpg'},
+ {k:'Referenzen',kind:'refs',sub:'Ausgewählte Projekte',L:'R',d:'Was wir gebaut haben – vorher und nachher.',fig:'atlas.png',room:'raum2.jpg'},
+ {k:'Materialien',kind:'mat',sub:'Zum Auswählen',L:'M',d:'Parkett, Fliesen, Marmor, Stuck, Bad und Türen.',fig:'adler.png',room:'raum3.jpg'},
+ {k:'Gestaltung',kind:'design',sub:'Einzelstücke',L:'G',d:'Marmor, Parkett, Stuck und Bad. Jede Wohnung ein Einzelstück.',fig:'relief.png',room:'raum4.jpg',gold:1},
+ {k:'Investor-Projekte',kind:'invest',sub:'Mit Partner',L:'I',d:'Gemeinsam kaufen und planen. Saniert wird in eigener Hand. Verkauft wird gemeinsam.',fig:'athlet.png',over:'athlet_rot.png',room:'raum5.jpg',edge:1},
+ {k:'Ablauf',kind:'steps',sub:'So arbeiten wir',L:'A',d:'Vom ersten Gespräch bis zur Übergabe – in Ruhe und im Detail.',fig:'perseus_fig.png',room:'raum6.jpg'},
+ {k:'Komplettsanierung',kind:'komplett',sub:'Ganze Wohnungen',L:'K',d:'Nur ganze Wohnungen und Häuser im Innenausbau. Kein Stückwerk.',fig:'greif.png',room:'raum7.jpg'},
+ {k:'Standard-Linie',kind:'standard',sub:'Preis pro m²',L:'S',d:'Gleiche Böden, Wände, Fliesen, Bad und Türen. Kalkulation pro m².',fig:'herkules2.png',room:'raum3.jpg',mir:1},
+ {k:'Kontakt',kind:'kontakt',sub:'Termin vereinbaren',L:'K',d:'Wir nehmen uns Zeit für Ihr Projekt.',fig:'herkules_kerberos.png',room:'raum2.jpg',mir:1}
+];
+const VN={1:'Galerie',2:'Durchgang',3:'Portal',4:'Panorama',5:'Lichtkegel'};
+const N=S.length,pad=n=>String(n).padStart(2,'0');
+const still=matchMedia('(prefers-reduced-motion: reduce)').matches;
+const $=id=>document.getElementById(id);
+const AR={};S.forEach(s=>{const i=new Image();i.onload=()=>AR[s.fig]=i.naturalWidth/i.naturalHeight;i.src=s.fig;});
+
+/* Ebenen bauen */
+function roomEl(s,cls){const d=document.createElement('div');d.className=cls||'rm';const i=document.createElement('i');i.style.backgroundImage=`url(${s.room})`;d.append(i);return d;}
+const E={amb:[],rooms:[],panels:[],portal:[],reveal:[],figs:[]};
+S.forEach((s,k)=>{
+  ['amb','rooms','reveal','portal'].forEach(c=>{const el=roomEl(s);$(c).append(el);E[c].push(el);});
+  const pn=roomEl(s,'pn');$('panels').append(pn);E.panels.push(pn);
+  const f=document.createElement('div');f.className='fg'+(s.gold?' gold':'');f.setAttribute('role','button');f.setAttribute('aria-label',s.k+' öffnen');f.tabIndex=0;
+  const im=document.createElement('img');im.src=s.fig;im.alt='';f.append(im);
+  if(s.over){const ov=document.createElement('img');ov.src=s.over;ov.alt='';ov.className='ov';f.append(ov);}f.onclick=e=>{if(moved>8)return;if(k===cur)openDetail(s,e);else go(k);};
+  f.onkeydown=e=>{if(e.key==='Enter')openDetail(s,e)};$('figs').append(f);E.figs.push(f);
+});
+const bars=$('bars');S.forEach((s,k)=>{const b=document.createElement('button');b.setAttribute('aria-label',s.k);b.innerHTML='<i></i>';b.onclick=()=>go(k);bars.append(b);});
+
+/* Zustand & Steuerung */
+let V=1,p=0,tgt=0,cur=-1,dragX=null,dragY=null,start=0,moved=0,horiz=null;
+function go(i){tgt=Math.max(0,Math.min(N-1,i));}
+$('prev').onclick=()=>go(Math.round(tgt)-1);$('next').onclick=()=>go(Math.round(tgt)+1);
+addEventListener('pointerdown',e=>{if(document.body.classList.contains('in')||e.target.closest('button:not(.fg),.sheet,.menu,input,.top,.lb,.dock'))return;dragX=e.clientX;dragY=e.clientY;start=tgt;moved=0;horiz=null;});
+addEventListener('pointermove',e=>{if(dragX==null)return;const dx=e.clientX-dragX,dy=e.clientY-dragY;if(horiz==null&&Math.abs(dx)+Math.abs(dy)>8)horiz=Math.abs(dx)>Math.abs(dy);
+  if(!horiz)return;moved=Math.abs(dx);tgt=Math.max(-.3,Math.min(N-.7,start-dx/(innerWidth*(innerWidth<760?.7:.55))));});
+addEventListener('pointerup',()=>{if(dragX==null)return;dragX=null;if(horiz){const dir=tgt-start;let t=Math.round(tgt);if(Math.abs(dir)>.12&&t===Math.round(start))t+=Math.sign(dir);go(t);}});
+addEventListener('pointercancel',()=>{dragX=null;go(Math.round(tgt));});
+let wheelLock=0;addEventListener('wheel',e=>{if(document.body.classList.contains('in')||e.target.closest('.sheet,.menu,.lb'))return;const now=performance.now();const v=Math.abs(e.deltaX)>Math.abs(e.deltaY)?e.deltaX:e.deltaY;if(Math.abs(v)<8||now<wheelLock)return;wheelLock=now+650;go(Math.round(tgt)+Math.sign(v));},{passive:true});
+addEventListener('keydown',e=>{if(/INPUT|TEXTAREA|SELECT/.test(e.target.tagName)||document.body.classList.contains('in')||!$('lb').hidden)return;if(e.key==='Escape'){closeAll();closeMenu();}
+  if(e.key==='ArrowRight')go(Math.round(tgt)+1);if(e.key==='ArrowLeft')go(Math.round(tgt)-1);});
+
+function setCur(i){if(i===cur)return;const first=cur<0,dir=i>cur?1:-1;cur=i;const s=S[i];
+  const c=$('cap');c.innerHTML=`<span class="ini">${s.L}</span><h1>${s.k}</h1><p>${s.d}</p><button>Öffnen</button>`;
+  c.querySelector('button').onclick=e=>openDetail(s,e);c.classList.remove('rise');void c.offsetWidth;c.classList.add('rise');
+  [...bars.children].forEach((b,k)=>b.classList.toggle('on',k===i));$('prev').style.opacity=i?1:.3;$('next').style.opacity=i<N-1?1:.3;if(!first)sweep(dir);}
+
+/* Figurgröße: Motiv bleibt ganz sichtbar */
+function fit(k,maxH,maxW){const ar=AR[S[k].fig]||1;let h=maxH,w=h*ar;if(w>maxW){w=maxW;h=w/ar;}return [w,h];}
+function place(k,cx,base,w,h,sc,op,extra){const f=E.figs[k];f.style.width=w+'px';f.style.height=h+'px';
+  f.style.transform=`translate3d(${(cx-w/2).toFixed(1)}px,${(base-h).toFixed(1)}px,0) scale(${sc.toFixed(3)})${extra||''}`;f.style.transformOrigin='50% 100%';
+  f.style.opacity=Math.max(0,Math.min(1,op)).toFixed(3);f.style.visibility=op<=0.01?'hidden':'visible';f.style.zIndex=Math.round(100-Math.abs(k-p)*10);}
+const mir=k=>S[k].mir?-1:1;
+const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
+
+const LAY={
+ /* 1 · Galerie: der Raum fährt mit, das Bild darin verschiebt sich langsamer (Tiefe) */
+ 1(t,W,H,mob,short){
+   E.rooms.forEach((r,k)=>{const d=k-p;const vis=Math.abs(d)<1.05;r.style.visibility=vis?'visible':'hidden';if(!vis)return;
+     r.style.transform=`translate3d(${(d*W).toFixed(1)}px,0,0)`;r.style.opacity=1;r.style.zIndex=1;
+     r.firstChild.style.transform=`translate3d(${(-d*W*.55).toFixed(1)}px,0,0) scale(${(1.04+Math.abs(d)*.06).toFixed(3)}) scaleX(${mir(k)})`;});
+   const cx=mob?W/2:W*.56,base=short?H*.98:mob?H*.66:H*.9;
+   S.forEach((s,k)=>{const d=k-p;const [w,h]=fit(k,short?H*.72:mob?H*.42:H*.66,mob?W*.88:W*.5);place(k,cx+d*W*1.25,base,w,h,1-Math.abs(d)*.08,1-Math.abs(d)*.9,` translateY(${still?0:(Math.sin(t*.8+k)*3).toFixed(1)}px)`);});
+ },
+ /* 2 · Durchgang: man läuft durch den Raum in den nächsten */
+ 2(t,W,H,mob,short){
+   E.rooms.forEach((r,k)=>{const d=k-p;let op,sc;if(d<=0){op=1+d*1.15;sc=1+(-d)*.55;}else{op=d<1?1:0;sc=1-d*.1;}
+     r.style.visibility=op>0.01?'visible':'hidden';r.style.opacity=clamp(op,0,1);r.style.zIndex=Math.round(50-d*10);
+     r.style.transform='none';r.firstChild.style.transform=`scale(${(sc*1.04).toFixed(3)}) scaleX(${mir(k)})`;});
+   const base=short?H*.98:mob?H*.84:H*.93;
+   S.forEach((s,k)=>{const d=k-p;const [w,h]=fit(k,short?H*.6:mob?H*.46:H*.56,mob?W*.86:W*.5);let sc,op,x;
+     if(d<=0){sc=1+(-d)*.9;op=1+d*1.6;x=W/2+d*W*.5*(k%2?1:-1);}else{sc=1-d*.4;op=1-d*.85;x=W/2+d*W*.08;}
+     place(k,x,base-(d>0?d*H*.08:0),w,h,sc,op);});
+ },
+ /* 3 · Portal: der Raum erscheint in einem Bogen, die Figur steht davor */
+ 3(t,W,H,mob,short){
+   const capEl=$('cap'),baseMax=mob?capEl.getBoundingClientRect().top-14:H;
+   const ay=short?Math.max(H*.14,56):mob?Math.max(H*.12,88):Math.max(H*.12,100);
+   let aw=short?Math.min(W*.3,H*.62):mob?W*.78:Math.min(W*.3,H*.48,Math.max(260,(W-2*(W-capEl.getBoundingClientRect().left)-60))),ah=short?H*.64:mob?Math.min(aw*1.34,baseMax-ay-H*.08):Math.min(aw*1.5,H*.58);
+   if(mob&&ah<aw*1.1){aw=Math.max(ah/1.1,W*.5);}
+   const ax=short?W*.36-aw/2:(W-aw)/2;
+   const po=$('portal');Object.assign(po.style,{left:ax+'px',top:ay+'px',width:aw+'px',height:ah+'px',borderRadius:`${aw/2}px ${aw/2}px 0 0`});
+   E.portal.forEach((r,k)=>{const d=k-p;const vis=Math.abs(d)<1.05;r.style.visibility=vis?'visible':'hidden';if(!vis)return;
+     r.style.transform=`translate3d(${(d*aw).toFixed(1)}px,0,0)`;r.style.opacity=1;r.firstChild.style.transform=`translate3d(${(-d*aw*.6).toFixed(1)}px,0,0) scaleX(${mir(k)})`;});
+   E.amb.forEach((r,k)=>{const d=k-p;const op=1-Math.abs(d);r.style.visibility=op>0?'visible':'hidden';r.style.opacity=clamp(op,0,1);r.style.transform='none';r.firstChild.style.transform=`scale(1.1) scaleX(${mir(k)})`;});
+   const drop=short?H*.1:mob?H*.075:H*.09;const base=mob?Math.min(ay+ah+drop,baseMax):ay+ah+drop;
+   const off=(!mob&&!short)?(ax+aw/2-W/2):0;document.querySelector('.logo').style.transform='';
+   $('bars').style.transform=`translateX(calc(-50% + ${off.toFixed(1)}px))`;if(!short)$('talkBtn').style.transform=`translateX(calc(-50% + ${off.toFixed(1)}px))`;else $('talkBtn').style.transform='';
+   const fl=$('floor');Object.assign(fl.style,{left:(ax+aw/2-aw*.95)+'px',top:(base-H*.05)+'px',width:(aw*1.9)+'px',height:(H*.1)+'px'});
+   const capL=(!mob&&!short)?capEl.getBoundingClientRect().left-28:1e9;
+   S.forEach((s,k)=>{const d=k-p,z=s.sz||1;let cx=ax+aw/2;const [w,h]=fit(k,ah*(short?.78:mob?.8:.84)*z,Math.min(aw*(mob?1.3:1.5)*z,capL<1e8?(capL-cx)*2:1e9));if(short&&cx+w/2>capL)cx=Math.max(w/2+20,capL-w/2);place(k,cx+d*W*.8,base+(s.dy||0)*ah,w,h,1,1-Math.abs(d)*1.1);});
+   /* Schriftzug: knapp über den Köpfen der größten Figur, quer durch */
+   const fs=parseFloat(getComputedStyle($('wm')).fontSize)||30;const headTop=base-ah*(short?.78:mob?.8:.84);
+   $('wm').style.top=Math.max(ay+fs*.9,headTop-fs*.9)+'px';
+ },
+ /* 4 · Panorama: alle Räume nebeneinander, Figuren gleiten schneller davor */
+ 4(t,W,H,mob,short){
+   const pw=short?W*.42:mob?W*.8:W*.5,ph=short?H*.66:mob?H*.5:H*.62,gap=mob?14:28,top=short?H*.12:mob?H*.14:H*.14;
+   E.panels.forEach((r,k)=>{const d=k-p;const x=W/2+d*(pw+gap)-pw/2;const vis=x<W+20&&x+pw>-20;r.style.visibility=vis?'visible':'hidden';if(!vis)return;
+     Object.assign(r.style,{width:pw+'px',height:ph+'px',top:top+'px',left:0,transform:`translate3d(${x.toFixed(1)}px,0,0)`});
+     const b=.18+.5*Math.max(0,1-Math.abs(d));r.firstChild.style.filter=`grayscale(1) contrast(1.12) brightness(${b.toFixed(3)})`;
+     r.firstChild.style.transform=`translate3d(${(-d*pw*.22).toFixed(1)}px,0,0) scaleX(${mir(k)})`;});
+   const base=top+ph+(mob?H*.04:H*.04);
+   S.forEach((s,k)=>{const d=k-p;const [w,h]=fit(k,short?ph*.76:ph*.74,pw*.9);place(k,W/2+d*(pw+gap)*1.55,base,w,h,1-Math.abs(d)*.15,1-Math.abs(d)*.95);});
+ },
+ /* 5 · Lichtkegel: der Raum ist fast dunkel und wird nur dort sichtbar, wo das Licht hinfällt */
+ 5(t,W,H,mob,short){
+   [E.rooms,E.reveal].forEach(L=>L.forEach((r,k)=>{const d=k-p;const op=1-Math.abs(d);r.style.visibility=op>0?'visible':'hidden';r.style.opacity=clamp(op,0,1);r.style.zIndex=1;
+     r.style.transform='none';r.firstChild.style.transform=`translate3d(${(-d*W*.12).toFixed(1)}px,0,0) scale(${(1.08+(still?0:Math.sin(t*.08)*.03)).toFixed(3)}) scaleX(${mir(k)})`;}));
+   const cx=mob?W/2:short?W*.66:W*.64,base=short?H*.98:mob?H*.66:H*.92;
+   S.forEach((s,k)=>{const d=k-p;const [w,h]=fit(k,short?H*.74:mob?H*.44:(s.gold?H*.6:H*.7),mob?W*.88:W*.5);place(k,cx+d*W*.7,base,w,h,1,1-Math.abs(d)*1.3);});
+ }
+};
+
+function resetStyles(){[...E.rooms,...E.amb,...E.reveal,...E.portal,...E.panels].forEach(r=>{r.removeAttribute('style');r.firstChild.style.transform='';r.firstChild.style.filter='';});}
+function setVar(i){V=i;document.body.className='v'+i;resetStyles();
+  const k=cur;cur=-1;setCur(Math.max(0,k));sweep(1);}
+
+/* Logo */
+function outlined(k,w){const box=document.createElement('div');box.innerHTML=markSVG(k,'class="ol"');const sv=box.firstChild;
+  sv.querySelectorAll('polygon,path,rect,circle,polyline,ellipse').forEach(el=>{const st=el.getAttribute('stroke'),fi=el.getAttribute('fill');const sw=parseFloat(el.getAttribute('stroke-width')||0);
+    if(el.getAttribute('style')&&/var\(--gap/.test(el.getAttribute('style'))){el.remove();return;}
+    if(st==='currentColor'){el.setAttribute('stroke','#000');el.setAttribute('stroke-width',sw+w);}
+    if(fi&&fi!=='none'){el.setAttribute('fill','#000');el.setAttribute('stroke','#000');el.setAttribute('stroke-width',w);el.setAttribute('stroke-linejoin','miter');}});
+  return sv.outerHTML+markSVG(k);}
+try{$('mk').innerHTML=outlined('A',9);}catch(e){}
+
+/* Flächen */
+const scrim=$('scrim');
+function openDetail(s,e){pulse=1;if(window.MO&&MO.kunde){MO.kunde(s);return;}}
+function closeAll(){document.querySelectorAll('.sheet').forEach(s=>s.classList.remove('open'));scrim.classList.remove('on');}
+document.querySelectorAll('[data-close]').forEach(b=>b.onclick=closeAll);scrim.onclick=closeAll;
+function openChat(focus){$('chat').classList.add('open');scrim.classList.add('on');if(focus)setTimeout(()=>$('ask').focus(),400);}
+$('talkBtn').onclick=()=>openChat();$('searchBtn').onclick=()=>openChat(true);$('writeBtn').onclick=()=>$('ask').focus();
+$('micBtn').onclick=()=>{$('ask').focus();$('chatHint').textContent='Tippe auf das Mikrofon deiner Tastatur und sprich – dein Text erscheint hier.';};
+$('ask').addEventListener('input',e=>{if(window.MO)MO.search(e.target.value);});
+$('ask').addEventListener('keydown',e=>{if(e.key!=='Enter')return;const q=e.target.value.toLowerCase();if(window.MO&&MO.searchEnter(q))return;const hit=S.findIndex(s=>q.includes(s.k.toLowerCase().split(/[ &-]/)[0]));
+  if(hit>=0){closeAll();go(hit);}else $('chatHint').textContent='Im fertigen Board beantwortet dein Assistent diese Frage.';});
+const menu=$('menu');$('menuBtn').onclick=()=>menu.classList.add('open');function closeMenu(){menu.classList.remove('open')}document.querySelector('[data-close-menu]').onclick=closeMenu;
+S.forEach((s,k)=>{const li=document.createElement('li');const b=document.createElement('button');b.innerHTML=`<i style="background-image:url(${s.room})"></i><img src="${s.fig}" alt="" style="${s.gold?'filter:none':''}"><span>${s.k}</span>`;b.onclick=()=>{closeMenu();go(k);};li.append(b);$('menuList').append(li);});
+
+/* ---------- Marke & Dateien ---------- */
+const FILES=[
+ ['MAVIO_OPUS_Markenpaket.zip','Komplettes Markenpaket','Alle Logos (SVG, PDF, EPS, PNG), Ausstattung, Profilbilder','ZIP',1],
+ ['MavioOpus_gestapelt_creme.svg','Logo als Vektor (SVG)','Gestapelt, Creme – für Web und Designer','SVG'],
+ ['MavioOpus_gestapelt_schwarz.pdf','Logo als Vektor (PDF)','Gestapelt, Schwarz – für die Druckerei','PDF'],
+ ['MavioOpus_Visitenkarte_Druck_85x55_mit_3mm_Anschnitt.pdf','Visitenkarte','Druckfertig 85 × 55 mm, Vorder- und Rückseite','PDF'],
+ ['MavioOpus_Briefkopf_A4.pdf','Briefkopf A4','Mit Falzmarken und Fußzeile','PDF'],
+ ['MavioOpus_Briefvorlage.docx','Briefvorlage Word','Zum direkten Schreiben','DOCX'],
+ ['MavioOpus_E-Mail-Signatur.html','E-Mail-Signatur','Öffnen, alles kopieren, in Mail einfügen','HTML'],
+ ['MavioOpus_Profilbild_1080_dunkel.png','Profilbild','1080 px für Instagram, WhatsApp, LinkedIn','PNG'],
+ ['MavioOpus_Logo-Handbuch.pdf','Logo-Handbuch','Farben, Formen, Regeln','PDF']];
+const dlList=document.getElementById('dlList');
+FILES.forEach(([f,t,d,x,main])=>{const b=document.createElement('button');if(main)b.className='main';b.innerHTML=`<span><b>${t}</b><small>${d}</small></span><i>${x} ↓</i>`;
+  b.onclick=async()=>{const hint=document.getElementById('dlHint');try{const dl=await claude.use('downloads');if(!dl){hint.textContent='Herunterladen geht hier nicht – öffne das Board in claude.ai.';return;}
+    let blob;if(/\.(zip|docx)$/.test(f)){const t=(await (await fetch('marke/'+f+'.b64.txt')).text()).trim();const bin=atob(t);const u=new Uint8Array(bin.length);for(let k=0;k<bin.length;k++)u[k]=bin.charCodeAt(k);blob=new Blob([u]);}else{blob=await (await fetch('marke/'+f)).blob();}await dl.save({filename:f,data:blob});}catch(e){if(e&&e.code==='declined')return;hint.textContent='Das hat gerade nicht geklappt – bitte noch einmal tippen.';}};dlList.append(b);});
+
+/* Licht & Staub */
+const dust=$('dust'),dx=dust.getContext('2d'),root=document.documentElement.style;
+let px=null,py=null,lastMove=-9,pulse=0,swT=1,swD=1,LX=50,LY=35;
+function sweep(d){if(still)return;swT=0;swD=d;pulse=Math.max(pulse,.5);}
+addEventListener('pointermove',e=>{px=e.clientX/innerWidth;py=e.clientY/innerHeight;lastMove=performance.now()/1000;});
+let P=[];function seed(){dust.width=innerWidth*devicePixelRatio;dust.height=innerHeight*devicePixelRatio;
+  P=Array.from({length:Math.round(innerWidth*innerHeight/16000)},()=>({x:Math.random()*innerWidth,y:Math.random()*innerHeight,r:Math.random()*1.4+.3,v:Math.random()*.2+.04,z:Math.random()*.9+.1,a:Math.random()*.3+.06}));}
+seed();addEventListener('resize',seed);
+function frame(ts){const t=ts/1000,W=innerWidth,H=innerHeight,mob=W<760||(H>W*1.15&&W<1200),short=H<540&&W>H;
+  if(dragX==null||!horiz)p+=(tgt-p)*(still?1:.085);else p+=(tgt-p)*.35;if(Math.abs(tgt-p)<.0005)p=tgt;
+  setCur(clamp(Math.round(p),0,N-1));LAY[V](t,W,H,mob,short);
+  let lx,ly;const active=px!=null&&t-lastMove<4;
+  if(active){lx=px*100;ly=py*100;}else{lx=(V===5?(mob?50:62):50)+22*Math.sin(t/5);ly=(V===5?40:32)+10*Math.cos(t/6.5);}
+  if(still){lx=55;ly=35;}LX+=(lx-LX)*.1;LY+=(ly-LY)*.1;pulse*=.96;
+  if(swT<1){swT=Math.min(1,swT+.02);const e=1-Math.pow(1-swT,3);root.setProperty('--sw',(swD>0?60-180*e:-120+180*e)+'%');}
+  root.setProperty('--lx',LX.toFixed(1)+'%');root.setProperty('--ly',LY.toFixed(1)+'%');root.setProperty('--pulse',pulse.toFixed(3));
+  const d=devicePixelRatio;dx.setTransform(d,0,0,d,0,0);dx.clearRect(0,0,W,H);const Lx=LX/100*W,Ly=LY/100*H,R2=Math.pow(Math.max(W,H)*.3,2);dx.fillStyle='rgb(255,240,220)';
+  for(const q of P){if(!still){q.y-=q.v;q.x+=Math.sin(t+q.r*9)*.1;}if(q.y<-5)q.y=H+5;
+    const g=Math.exp(-((q.x-Lx)**2+(q.y-Ly)**2)/R2);dx.globalAlpha=Math.min(.8,q.a*(.25+2*g+pulse));dx.beginPath();dx.arc(q.x,q.y,q.r*q.z+.25,0,6.283);dx.fill();}
+  requestAnimationFrame(frame);}
+setVar(3);
+requestAnimationFrame(frame);
+/* ---------- Musik: Auswahl über den Lautsprecher-Knopf – startet beim Öffnen (oder beim ersten Antippen, falls der Browser das verlangt) ---------- */
+(function(){const a=$('music'),btn=$('musicBtn'),pk=$('mpick');let off=false,fadeT=null,tr='mond';
+  const TR=[['#','Klassik'],['satie','Satie – Gymnopédie Nr. 1','Klavier solo – ruhig, minimalistisch','musik/satie.mp3'],
+    ['clair','Debussy – Clair de lune','Klavier – weich, fließend, wie Mondlicht','musik/clair-de-lune.mp3'],
+    ['air','Bach – Air','Klavierfassung – zeitlos, getragen','musik/air.mp3'],
+    ['mond','Beethoven – Mondscheinsonate','1. Satz – dunkel, tief, still','musik/mondschein.mp3'],
+    ['nocturne','Chopin – Nocturne op. 9 Nr. 2','Klavier – romantisch, elegant','musik/nocturne.mp3'],
+    ['pavane','Fauré – Pavane','Klavierfassung – vornehm, leicht antik','musik/pavane.mp3'],
+    ['#','Weitere'],['lounge','Lounge','Ruhiger Deep House – E-Piano, sanfter Beat','musik/lounge.mp3'],['harfe','Harfe','Klassisch & schwebend – Harfe, Streicher, Flöte','musik/harfe.mp3'],
+    ['jazz','Jazz-Bar','Piano-Trio – Klavier, Kontrabass, Besen','musik/jazz.mp3']];
+  try{if(localStorage.getItem('mo-std')!=='mond'){localStorage.setItem('mo-std','mond');localStorage.setItem('mo-stueck','mond');localStorage.setItem('mo-musik','an');}off=localStorage.getItem('mo-musik')==='aus';tr=localStorage.getItem('mo-stueck')||tr;}catch(e){}
+  if(!TR.some(t=>t[0]===tr&&t[3]))tr='mond';a.src=TR.find(t=>t[0]===tr)[3];
+  TR.forEach(([k,t,d,src],ix)=>{if(k==='#'){const h=document.createElement('span');h.className='h';h.textContent=t;pk.append(h);return;}const b=document.createElement('button');b.dataset.k=k;b.innerHTML=`<i></i><span><b>${t}</b><small>${d}</small></span>`;
+    b.onclick=()=>{tr=k;off=false;try{localStorage.setItem('mo-stueck',k);localStorage.setItem('mo-musik','an');}catch(e){}a.src=src;a.volume=0;a.play().then(()=>fade(TARGET)).catch(()=>{});ui();};pk.append(b);});
+  const offB=document.createElement('button');offB.dataset.k='aus';offB.innerHTML='<i></i><span><b>Aus</b><small>Keine Musik</small></span>';
+  offB.onclick=()=>{off=true;try{localStorage.setItem('mo-musik','aus');}catch(e){}ui();fade(0,()=>a.pause());};pk.append(offB);
+  {const c=document.createElement('small');c.className='cr';c.textContent='Klassik-Aufnahmen: Klavierfassungen nach freiem Notensatz des Mutopia Project (CC BY-SA), Klang: Salamander Grand Piano.';pk.append(c);}
+  const TARGET=.45;function fade(to,done){clearInterval(fadeT);const from=a.volume,steps=to>from?40:15;let n=0;fadeT=setInterval(()=>{n++;try{a.volume=Math.max(0,Math.min(1,from+(to-from)*n/steps));}catch(e){}if(n>=steps){clearInterval(fadeT);done&&done();}},60);}
+  function ui(){btn.classList.toggle('off',off);[...pk.querySelectorAll('button')].forEach(b=>b.setAttribute('aria-pressed',String(off?b.dataset.k==='aus':b.dataset.k===tr)));}
+  function play(){if(off||!a.paused)return;a.volume=0;const pr=a.play();if(pr&&pr.then)pr.then(()=>{fade(TARGET);detach();}).catch(()=>{});}
+  const kick=e=>{if(e&&e.target&&e.target.closest&&e.target.closest('#musicBtn,#mpick'))return;play();};
+  function detach(){['pointerdown','keydown','touchstart'].forEach(t=>removeEventListener(t,kick,true));}
+  ['pointerdown','keydown','touchstart'].forEach(t=>addEventListener(t,kick,true));
+  btn.onclick=e=>{e.stopPropagation();pk.classList.toggle('open');};
+  addEventListener('pointerdown',e=>{if(!e.target.closest('#mpick,#musicBtn'))pk.classList.remove('open');});
+  addEventListener('keydown',e=>{if(e.key==='Escape')pk.classList.remove('open');});
+  ui();play();})();
+</script>
+<script>
+/* ================= MAVIO OPUS · Kunden & Intern ================= */
+window.MO=(function(){
+const $=id=>document.getElementById(id);
+const esc=s=>String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const P2=n=>String(n).padStart(2,'0');
+const today=()=>{const d=new Date();return d.getFullYear()+'-'+P2(d.getMonth()+1)+'-'+P2(d.getDate());};
+const addDays=(s,n)=>{const d=new Date(s+'T12:00');d.setDate(d.getDate()+n);return d.getFullYear()+'-'+P2(d.getMonth()+1)+'-'+P2(d.getDate());};
+const num=v=>{if(v==null||v==='')return 0;const n=parseFloat(String(v).replace(/\./g,'').replace(',','.'));return isNaN(n)?0:n;};
+const eur=n=>(n||0).toLocaleString('de-DE',{style:'currency',currency:'EUR',maximumFractionDigits:0});
+const eur2=n=>(n||0).toLocaleString('de-DE',{style:'currency',currency:'EUR'});
+const dShort=s=>s?new Date(s+'T12:00').toLocaleDateString('de-DE',{weekday:'short',day:'2-digit',month:'2-digit'}):'';
+const dLong=s=>s?new Date(s+'T12:00').toLocaleDateString('de-DE',{weekday:'long',day:'numeric',month:'long'}):'';
+const blobUrl=f=>f&&(f.url||('/_blob/'+f.id));
+const isImg=f=>f&&/^image\//.test(f.type||'');
+function toast(m){const t=$('toast');t.textContent=m;t.classList.add('on');clearTimeout(toast.t);toast.t=setTimeout(()=>t.classList.remove('on'),2200);}
+
+/* ---------- Bereiche und Felder ---------- */
+const STATUS=['Anfrage','Besichtigung','Angebot','Beauftragt','In Arbeit','Abnahme','Abgeschlossen'];
+const ART=['Komplettsanierung','Investor-Projekt','Standard-Linie','Sonstiges'];
+const PRIO=[['1','Grün – kann warten'],['2','Gelb – bald'],['3','Orange – wichtig'],['4','Rot – dringend']];
+const MATKAT=['Parkett','Fliesen','Marmor & Naturstein','Wand & Stuck','Bad & Armaturen','Türen','Licht','Küche','Sonstiges'];
+const C={
+ auftraege:{t:'Aufträge',one:'Auftrag',f:[['titel','Bezeichnung','text',{req:1,w:1,ph:'z. B. Altbauwohnung Bahnhofstraße'}],['kunde','Kunde / Eigentümer','text'],['adresse','Adresse','text'],['art','Art','sel',{o:ART}],['status','Status','sel',{o:STATUS}],['flaeche','Wohnfläche (m²)','num'],['start','Beginn','date'],['ende','Fertig bis','date'],['budgetVon','Budget ab (€)','num'],['budgetBis','Budget bis (€)','num'],
+   ['kaufpreis','Kaufpreis (€) – Investor-Projekt','num'],['nebenkosten','Kaufnebenkosten (€)','num'],['verkaufspreis','Verkaufspreis geplant (€)','num'],['investor','Investor / Partner','text'],
+   ['notiz','Notizen','area',{w:1}],['dateien','Pläne, Grundrisse, Fotos, Angebote','files',{w:1,k:['Plan','Grundriss','Foto','Angebot','Vertrag','Sonstiges']}]]},
+ termine:{t:'Termine',one:'Termin',f:[['titel','Was','text',{req:1,w:1}],['datum','Datum','date',{req:1}],['zeit','Uhrzeit','time'],['bis','bis','time'],['ort','Ort','text'],['auftrag','Auftrag','ref',{c:'auftraege'}],['notiz','Notiz','area',{w:1}]]},
+ aufgaben:{t:'Aufgaben',one:'Aufgabe',f:[['titel','Aufgabe','text',{req:1,w:1}],['prio','Dringlichkeit','sel',{o:PRIO,def:'2'}],['faellig','Fällig','date'],['auftrag','Auftrag','ref',{c:'auftraege'}],['erledigt','Erledigt','check'],['notiz','Notiz','area',{w:1}]]},
+ kartei:{t:'Kartei',one:'Kontakt',f:[['name','Name','text',{req:1}],['firma','Firma','text'],['kategorie','Kategorie','sel',{o:['Investor','Partner','Kunde','Steuerberater','Notar','Bank','Lieferant','Handwerker','Architekt / Planer','Behörde','Sonstige']}],['gewerk','Gewerk / Material','text',{ph:'z. B. Fliesen, Marmor, Elektro'}],['telefon','Telefon','tel'],['email','E-Mail','email'],['adresse','Adresse','text',{w:1}],['notiz','Notiz','area',{w:1}],['foto','Foto / Visitenkarte','files',{w:1,one:1}]]},
+ unterlagen:{t:'Unterlagen',one:'Unterlage',f:[['titel','Bezeichnung','text',{req:1,w:1}],['kategorie','Kategorie','sel',{o:['Notar','Handelsregister','Gewerbe','Finanzamt','Verträge','Versicherung','Bank','Sonstiges']}],['datum','Datum','date'],['notiz','Notiz','area',{w:1}],['dateien','Dateien','files',{w:1,k:['Dokument','Scan','Foto']}]]},
+ konten:{t:'Bank & Karten',one:'Konto / Karte',f:[['bezeichnung','Bezeichnung','text',{req:1,ph:'z. B. Geschäftskonto Mavio Opus'}],['bank','Bank','text'],['art','Art','sel',{o:['Geschäftskonto','Privatkonto','Kreditkarte','Debitkarte','Tagesgeld','Sonstiges']}],['endziffern','Letzte 4 Ziffern','text',{max:4,ph:'1234'}],['link','Online-Banking (Adresse)','url',{w:1,ph:'https://…'}],['notiz','Notiz','area',{w:1}]],note:'Bitte keine vollständigen Karten- oder Kontonummern, PINs oder Passwörter speichern – nur die letzten vier Ziffern.'},
+ gruendung:{t:'Gründung',one:'Schritt',f:[['titel','Schritt','text',{req:1,w:1}],['erledigt','Erledigt','check'],['faellig','Bis wann','date'],['notiz','Notiz','area',{w:1}],['dateien','Dateien','files',{w:1,k:['Dokument','Scan']}]]},
+ ideen:{t:'Ideen',one:'Idee',f:[['titel','Idee','text',{req:1,w:1}],['notiz','Beschreibung','area',{w:1}],['fotos','Bilder','files',{w:1,k:['Inspiration','Skizze','Foto']}]]},
+ referenzen:{t:'Referenzen',one:'Referenz',f:[['titel','Projekt','text',{req:1,ph:'z. B. Gründerzeitwohnung'}],['ort','Ort / Stadtteil','text'],['art','Art','sel',{o:ART}],['jahr','Jahr','text'],['flaeche','Wohnfläche (m²)','num'],['zeigen','Kunden zeigen','check',{def:true}],['beschreibung','Beschreibung für Kunden','area',{w:1}],['fotos','Fotos','files',{w:1,k:['Nachher','Vorher','Grundriss','Detail']}]]},
+ materialien:{t:'Materialien',one:'Material',f:[['name','Bezeichnung','text',{req:1,ph:'z. B. Eiche Fischgrät, natur geölt'}],['kategorie','Kategorie','sel',{o:MATKAT}],['hersteller','Hersteller / Lieferant','text'],['format','Format / Maße','text'],['preis','Einkaufspreis (€) – nur intern','num'],['einheit','pro','sel',{o:['m²','lfm','Stück','pauschal']}],['zeigen','Kunden zeigen','check',{def:true}],['standard','Teil der Standard-Linie','check'],['beschreibung','Beschreibung für Kunden','area',{w:1}],['foto','Foto','files',{w:1,one:1}]]}
+};
+const TABS=[['Arbeiten',[['heute','Heute'],['auftraege','Aufträge'],['kalkulation','Kalkulation'],['termine','Termine'],['aufgaben','Aufgaben']]],
+ ['Firma',[['kartei','Kartei'],['unterlagen','Unterlagen'],['konten','Bank & Karten'],['gruendung','Gründung'],['marke','Marke'],['ideen','Ideen']]],
+ ['Für Kunden',[['referenzen','Referenzen'],['materialien','Materialien']]],
+ ['',[['einstellungen','Einstellungen']]]];
+
+/* ---------- Speicher ---------- */
+let db=null,assets=null,ready=false;const D={};Object.keys(C).forEach(k=>D[k]=[]);let SET={};
+const mem={};let memId=0;
+async function save(col,id,data){
+  if(db){try{if(id){await db.doc(col+'/'+id).set(data);}else{const r=await db.collection(col).add(data);id=r.id;}return id;}catch(e){toast('Konnte nicht speichern');throw e;}}
+  id=id||('m'+(++memId));const L=D[col],i=L.findIndex(x=>x.id===id);const row=Object.assign({id},data);if(i>=0)L[i]=row;else L.push(row);render();return id;}
+async function patch(col,id,data){const cur=D[col].find(x=>x.id===id)||{};const row=Object.assign({},cur,data);delete row.id;return save(col,id,row);}
+async function del(col,id){if(db){try{await db.doc(col+'/'+id).delete();}catch(e){toast('Konnte nicht löschen');}}else{D[col]=D[col].filter(x=>x.id!==id);render();}}
+async function saveSet(data){SET=Object.assign({},SET,data);if(db){try{await db.doc('einstellungen/board').set(SET);}catch(e){toast('Konnte nicht speichern');}}else render();}
+function init(){let tries=0;(function go(){if(!(window.claude&&window.claude.use)){if(++tries<20)return setTimeout(go,500);return storeNote();}
+  claude.use('db').then(d=>{if(!d)return storeNote();db=d;ready=true;
+    Object.keys(C).forEach(k=>db.collection(k).onSnapshot(s=>{D[k]=s.docs.map(x=>Object.assign({id:x.id},x.data()));render();},()=>storeNote('Verbindung unterbrochen – bitte neu laden.')));
+    db.doc('einstellungen/board').onSnapshot(s=>{SET=(s&&s.exists&&s.data())||(s&&s.data&&s.data())||{};render();},()=>{});
+    storeNote('');}).catch(()=>storeNote());
+  claude.use('assets').then(a=>{assets=a;}).catch(()=>{});})();}
+function storeNote(m){const el=$('iStore');if(!el)return;el.textContent=m==null?'Hinweis: In dieser Vorschau wird nichts dauerhaft gespeichert. Öffne das Board in claude.ai.':m;}
+
+/* ---------- Modus ---------- */
+let MODE='kunden',TAB='heute',DETAIL=null,KALK=null;
+async function hash(s){try{const b=await crypto.subtle.digest('SHA-256',new TextEncoder().encode('mavio-opus:'+s));return [...new Uint8Array(b)].map(x=>x.toString(16).padStart(2,'0')).join('');}catch(e){return 'x'+s;}}
+function setMode(m,force){
+  if(m==='intern'&&MODE!=='intern'&&SET.pin&&!force){openPin();return;}
+  MODE=m;document.body.classList.toggle('in',m==='intern');
+  document.querySelectorAll('.mode button').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.m===m)));
+  try{localStorage.setItem('mo-modus',m);}catch(e){}
+  if(m==='intern'){closeSheets();render();}
+}
+
+const dock=$('dock');$('dGrip').onclick=e=>{e.stopPropagation();const o=!dock.classList.contains('open');dock.classList.toggle('open',o);$('dGrip').setAttribute('aria-expanded',String(o));};
+addEventListener('pointerdown',e=>{if(!e.target.closest('#dock'))dock.classList.remove('open');});
+document.querySelectorAll('.mode button').forEach(b=>b.onclick=()=>{dock.classList.remove('open');setMode(b.dataset.m);});
+function closeSheets(){document.querySelectorAll('.sheet').forEach(s=>s.classList.remove('open'));$('scrim').classList.remove('on');}
+function openSheet(id){$(id).classList.add('open');$('scrim').classList.add('on');}
+function openPin(){$('pinIn').value='';$('pinHint').textContent='So sehen Kunden deinen internen Bereich nicht.';openSheet('pinSheet');setTimeout(()=>$('pinIn').focus(),350);}
+$('pinForm').onsubmit=async e=>{e.preventDefault();const h=await hash($('pinIn').value);if(h===SET.pin){unlocked=true;closeSheets();setMode('intern',true);}else{$('pinHint').textContent='Falsche PIN.';$('pinIn').value='';}};
+
+/* ---------- Großansicht ---------- */
+let LB=[],LBi=0;
+function lightbox(list,i){LB=list.filter(isImg);if(!LB.length)return;LBi=Math.max(0,LB.indexOf(list[i]));$('lb').hidden=false;paintLb();}
+function paintLb(){const f=LB[LBi];$('lbImg').src=blobUrl(f);$('lbCap').textContent=[f.kat,f.cap].filter(Boolean).join(' · ')+(LB.length>1?`  ·  ${LBi+1} / ${LB.length}`:'');$('lbP').style.visibility=LB.length>1?'visible':'hidden';$('lbN').style.visibility=LB.length>1?'visible':'hidden';}
+$('lbX').onclick=()=>$('lb').hidden=true;$('lbP').onclick=()=>{LBi=(LBi-1+LB.length)%LB.length;paintLb();};$('lbN').onclick=()=>{LBi=(LBi+1)%LB.length;paintLb();};
+$('lb').onclick=e=>{if(e.target.id==='lb')$('lb').hidden=true;};
+addEventListener('keydown',e=>{if($('lb').hidden)return;if(e.key==='Escape')$('lb').hidden=true;if(e.key==='ArrowRight')$('lbN').click();if(e.key==='ArrowLeft')$('lbP').click();});
+let lbx=null;$('lb').addEventListener('pointerdown',e=>lbx=e.clientX);$('lb').addEventListener('pointerup',e=>{if(lbx==null)return;const dx=e.clientX-lbx;lbx=null;if(Math.abs(dx)>50)(dx<0?$('lbN'):$('lbP')).click();});
+
+/* ================= KUNDEN-ANSICHT ================= */
+const BRAND=[...document.querySelectorAll('#brand .bgrid,#brand #dlList,#brand #dlHint')];
+const shown=c=>D[c].filter(x=>x.zeigen!==false);
+const refPhotos=r=>{const f=(r.fotos||[]).filter(isImg);return f.sort((a,b)=>(a.kat==='Nachher'?0:1)-(b.kat==='Nachher'?0:1));};
+function refTiles(list){if(!list.length)return `<div class="empty-note">Hier erscheinen Ihre Referenzprojekte. <span class="intern-only">Lege sie im internen Bereich unter „Referenzen“ an.</span></div>`;
+  return `<div class="gal">${list.map(r=>{const ph=refPhotos(r)[0];return `<button class="tile" data-ref="${r.id}"><div class="ph${ph?'':' empty'}" ${ph?`style="background-image:url('${blobUrl(ph)}')"`:''}>${ph?'':'Mavio Opus'}${r.art?`<em>${esc(r.art)}</em>`:''}</div><div class="tx"><strong>${esc(r.titel)}</strong><small>${esc([r.ort,r.jahr,r.flaeche?r.flaeche+' m²':''].filter(Boolean).join(' · '))}</small>${r.beschreibung?`<span>${esc(r.beschreibung).slice(0,160)}${r.beschreibung.length>160?' …':''}</span>`:''}</div></button>`;}).join('')}</div>`;}
+function matTiles(list){if(!list.length)return `<div class="empty-note">Hier erscheinen Ihre Materialien.</div>`;
+  return `<div class="gal">${list.map(m=>{const ph=(m.foto||[])[0];return `<button class="tile" data-mat="${m.id}"><div class="ph${ph?'':' empty'}" ${ph?`style="background-image:url('${blobUrl(ph)}')"`:''}>${ph?'':esc(m.kategorie||'Material')}${m.kategorie?`<em>${esc(m.kategorie)}</em>`:''}</div><div class="tx"><strong>${esc(m.name)}</strong><small>${esc([m.hersteller,m.format].filter(Boolean).join(' · '))}</small>${m.beschreibung?`<span>${esc(m.beschreibung)}</span>`:''}</div></button>`;}).join('')}</div>`;}
+let matKat='Alle',curK=null;
+function kunde(s){curK=s;$('dIdx').textContent=s.sub;$('dTitle').textContent=s.k;$('dText').textContent=s.d;paintKunde();setTimeout(()=>openSheet('detail'),60);}
+function paintKunde(){const s=curK;if(!s)return;let h='';const refs=shown('referenzen'),mats=shown('materialien');
+  const byArt=a=>refs.filter(r=>r.art===a);
+  if(s.kind==='start'){h=`<div class="kbig">${[[4,'Mit Partner','Investor-Projekte'],[6,'Ganze Wohnungen','Komplettsanierung'],[7,'Preis pro m²','Standard-Linie']].map(([i,a,b])=>`<div role="button" tabindex="0" data-go="${i}" style="cursor:pointer"><small>${a}</small><b>${b}</b></div>`).join('')}</div><div class="sub2">Ausgewählte Referenzen</div>${refTiles(refs.slice(0,3))}`;}
+  else if(s.kind==='refs'){h=refTiles(refs);}
+  else if(s.kind==='mat'){const kats=['Alle',...MATKAT.filter(k=>mats.some(m=>m.kategorie===k))];if(!kats.includes(matKat))matKat='Alle';
+    h=`<div class="chips">${kats.map(k=>`<button data-kat="${esc(k)}" aria-pressed="${k===matKat}">${esc(k)}</button>`).join('')}</div>${matTiles(mats.filter(m=>matKat==='Alle'||m.kategorie===matKat))}`;}
+  else if(s.kind==='design'){h=`<ol class="steps"><li><b>Wände</b><span>Kassetten, Stuck und feiner Putz – handwerklich und ruhig.</span></li><li><b>Böden</b><span>Fischgrät-Parkett und großformatiger Marmor.</span></li><li><b>Bad</b><span>Naturstein, edle Armaturen, klare Linien.</span></li><li><b>Licht</b><span>Kronleuchter, Wandleuchten und gezieltes Licht für jeden Raum.</span></li></ol><div class="sub2">Aus unseren Projekten</div>${refTiles(refs)}`;}
+  else if(s.kind==='invest'){h=`<ol class="steps"><li><b>Gemeinsam kaufen</b><span>Objekt auswählen, prüfen und gemeinsam projektieren.</span></li><li><b>Sanieren in eigener Hand</b><span>Planung, Gestaltung und Ausführung aus einer Hand.</span></li><li><b>Gemeinsam verkaufen</b><span>Vermarktung und Verkauf abgestimmt mit dem Partner.</span></li></ol><div class="sub2">Investor-Projekte</div>${refTiles(byArt('Investor-Projekt'))}`;}
+  else if(s.kind==='steps'){h=`<ol class="steps"><li><b>Kennenlernen</b><span>Wir sprechen über Ihre Wünsche, Ihren Stil und Ihren Budgetrahmen.</span></li><li><b>Besichtigung & Aufmaß</b><span>Vor Ort nehmen wir alle Maße, Fotos und den Grundriss auf.</span></li><li><b>Planung & Angebot</b><span>Sie erhalten ein klares Angebot – ganze Wohnung, ein Preis.</span></li><li><b>Bemusterung</b><span>Böden, Fliesen, Marmor, Türen und Bad wählen Sie mit uns aus.</span></li><li><b>Umsetzung</b><span>Sauber, in Ruhe, im Detail – mit festen Ansprechpartnern.</span></li><li><b>Übergabe</b><span>Gemeinsame Abnahme und eine Wohnung, die fertig ist.</span></li></ol>`;}
+  else if(s.kind==='komplett'){h=`<ol class="steps"><li><b>Ganze Wohnung oder Haus</b><span>Wir übernehmen den kompletten Innenausbau – keine Teilsanierungen.</span></li><li><b>Alles abgestimmt</b><span>Böden, Wände, Bad, Türen, Licht und Elektrik greifen ineinander.</span></li><li><b>Ein Ansprechpartner</b><span>Von der Planung bis zur Übergabe.</span></li></ol><div class="sub2">Komplettsanierungen</div>${refTiles(byArt('Komplettsanierung'))}`;}
+  else if(s.kind==='standard'){const st=mats.filter(m=>m.standard);h=`${SET.standardPreis?`<div class="kpis"><div class="kpi"><small>Standard-Linie</small><b>ab ${eur(num(SET.standardPreis))} / m²</b></div></div>`:''}<div class="sub2">Ausstattung der Standard-Linie</div>${matTiles(st)}`;}
+  else if(s.kind==='kontakt'){const tel=SET.telefon,mail=SET.email;h=`<div class="kbig">${SET.kontaktName?`<div><small>Ihr Ansprechpartner</small><b>${esc(SET.kontaktName)}</b></div>`:''}${tel?`<a href="tel:${esc(tel.replace(/\s/g,''))}"><small>Telefon</small><b>${esc(tel)}</b></a>`:''}${mail?`<a href="mailto:${esc(mail)}"><small>E-Mail</small><b style="font-size:19px;overflow-wrap:anywhere">${esc(mail)}</b></a>`:''}${SET.adresse?`<div><small>Adresse</small><b style="font-size:19px;white-space:pre-wrap">${esc(SET.adresse)}</b></div>`:''}</div>${(!tel&&!mail)?`<div class="empty-note">Kontaktdaten folgen. <span class="intern-only">Trage sie im internen Bereich unter „Einstellungen“ ein.</span></div>`:''}`;}
+  $('dBody').innerHTML=h;
+  $('dBody').querySelectorAll('[data-ref]').forEach(b=>b.onclick=()=>{const r=D.referenzen.find(x=>x.id===b.dataset.ref);if(!r)return;const ph=refPhotos(r);if(ph.length)lightbox(ph.map(f=>Object.assign({},f,{cap:r.titel})),0);});
+  $('dBody').querySelectorAll('[data-mat]').forEach(b=>b.onclick=()=>{const m=D.materialien.find(x=>x.id===b.dataset.mat);if(m&&(m.foto||[]).length)lightbox(m.foto.map(f=>Object.assign({},f,{kat:m.kategorie,cap:m.name})),0);});
+  $('dBody').querySelectorAll('[data-kat]').forEach(b=>b.onclick=()=>{matKat=b.dataset.kat;paintKunde();});
+  $('dBody').querySelectorAll('[data-go]').forEach(b=>b.onclick=()=>{closeSheets();go(+b.dataset.go);});}
+
+/* ================= INTERN ================= */
+function nav(){const cnt={auftraege:D.auftraege.filter(a=>a.status!=='Abgeschlossen').length,aufgaben:D.aufgaben.filter(a=>!a.erledigt).length,termine:D.termine.filter(t=>t.datum>=today()).length};
+  $('inav').innerHTML=TABS.map(([g,L])=>(g?`<span class="grp">${g}</span>`:'<span class="grp"></span>')+L.map(([k,t])=>`<button data-tab="${k}" aria-current="${k===TAB}">${t}${cnt[k]?`<i>${cnt[k]}</i>`:''}</button>`).join('')).join('');
+  $('inav').querySelectorAll('button').forEach(b=>b.onclick=()=>{TAB=b.dataset.tab;DETAIL=null;render();$('iBody').parentElement.scrollTop=0;});}
+const aName=id=>{const a=D.auftraege.find(x=>x.id===id);return a?a.titel:'';};
+function head(sub,title,acts){$('iSub').textContent=sub;$('iTitle').textContent=title;$('iActs').innerHTML=acts||'';}
+const newBtn=c=>`<button class="ibtn red" data-new="${c}">+ ${C[c].one}</button>`;
+function sortT(L){return L.slice().sort((a,b)=>(a.datum+(a.zeit||'')).localeCompare(b.datum+(b.zeit||'')));}
+function terminRow(t){return `<div class="irow" data-edit="termine:${t.id}"><span class="d">${dShort(t.datum)}${t.zeit?'<br>'+esc(t.zeit):''}</span><span class="m"><b>${esc(t.titel)}</b><small>${esc([t.ort,aName(t.auftrag)].filter(Boolean).join(' · '))}</small></span></div>`;}
+function taskRow(t){return `<div class="irow${t.erledigt?' done':''}" data-edit="aufgaben:${t.id}"><input type="checkbox" data-done="aufgaben:${t.id}" ${t.erledigt?'checked':''} aria-label="Erledigt"><span class="prio p${t.prio||2}"></span><span class="m"><b>${esc(t.titel)}</b><small>${esc([t.faellig?'fällig '+dShort(t.faellig):'',aName(t.auftrag)].filter(Boolean).join(' · '))}</small></span></div>`;}
+function sumPos(a){return (a.pos||[]).reduce((s,p)=>s+num(p.menge)*num(p.ep),0);}
+function aCard(a){const ph=(a.dateien||[]).find(isImg);const s=sumPos(a);return `<div class="ic" data-open="${a.id}">${ph?`<div class="thumb" style="background-image:url('${blobUrl(ph)}')"></div>`:''}<b>${esc(a.titel)}</b><small>${esc([a.kunde,a.adresse].filter(Boolean).join(' · '))||'&nbsp;'}</small><div class="meta">${a.status?`<span class="tag ${a.status==='Abgeschlossen'?'ok':'red'}">${esc(a.status)}</span>`:''}${a.art?`<span class="tag">${esc(a.art)}</span>`:''}${a.flaeche?`<span class="tag">${esc(a.flaeche)} m²</span>`:''}${s?`<span class="tag">${eur(s)}</span>`:''}</div></div>`;}
+function genericCard(c,x){const F=C[c].f;const title=x[F[0][0]];const ph=(x.fotos||x.foto||x.dateien||[]).find(isImg);
+  let sub=[];if(c==='kartei')sub=[x.firma,x.kategorie,x.gewerk];else if(c==='unterlagen')sub=[x.kategorie,x.datum?dShort(x.datum):'',(x.dateien||[]).length?(x.dateien.length+' Datei'+(x.dateien.length>1?'en':'')):''];
+  else if(c==='konten')sub=[x.bank,x.art,x.endziffern?'•••• '+x.endziffern:''];else if(c==='referenzen')sub=[x.ort,x.art,x.jahr,x.zeigen===false?'nicht sichtbar':''];else if(c==='materialien')sub=[x.kategorie,x.hersteller,x.preis?eur2(num(x.preis))+' / '+(x.einheit||'m²'):'',x.standard?'Standard-Linie':'',x.zeigen===false?'nicht sichtbar':''];else if(c==='ideen')sub=[(x.notiz||'').slice(0,90)];
+  const links=c==='kartei'?`<div class="meta">${x.telefon?`<a class="tag" href="tel:${esc(x.telefon.replace(/\s/g,''))}" data-stop>Anrufen</a>`:''}${x.email?`<a class="tag" href="mailto:${esc(x.email)}" data-stop>E-Mail</a>`:''}</div>`:c==='konten'&&x.link?`<div class="meta"><a class="tag red" href="${esc(x.link)}" target="_blank" rel="noopener" data-stop>Online-Banking öffnen</a></div>`:'';
+  return `<div class="ic" data-edit="${c}:${x.id}">${ph?`<div class="thumb" style="background-image:url('${blobUrl(ph)}')"></div>`:''}<b>${esc(title)}</b><small>${esc(sub.filter(Boolean).join(' · '))||'&nbsp;'}</small>${links}</div>`;}
+function empty(t){return `<div class="empty-note">${t}</div>`;}
+
+function render(){if(MODE==='kunden'){if($('detail').classList.contains('open'))paintKunde();return;}
+  nav();const B=$('iBody');let h='';const T=today();
+  if(DETAIL){return renderAuftrag();}
+  if(TAB==='heute'){head(dLong(T),'Heute',`${newBtn('termine')}${newBtn('aufgaben')}`);
+    const tt=sortT(D.termine.filter(t=>t.datum===T)),next=sortT(D.termine.filter(t=>t.datum>T&&t.datum<=addDays(T,7)));
+    const open=D.aufgaben.filter(t=>!t.erledigt).sort((a,b)=>(b.prio||2)-(a.prio||2)||String(a.faellig||'9').localeCompare(String(b.faellig||'9')));
+    const run=D.auftraege.filter(a=>['Beauftragt','In Arbeit','Abnahme'].includes(a.status));
+    const pipe=D.auftraege.filter(a=>['Anfrage','Besichtigung','Angebot'].includes(a.status));
+    h=`<div class="kpis"><div class="kpi"><small>Termine heute</small><b class="red">${tt.length}</b></div><div class="kpi"><small>Offene Aufgaben</small><b>${open.length}</b></div><div class="kpi"><small>Aufträge laufen</small><b>${run.length}</b></div><div class="kpi"><small>Anfragen & Angebote</small><b>${pipe.length}</b></div></div>
+    <div class="isec"><h3>Termine heute</h3><div class="ilist">${tt.map(terminRow).join('')||empty('Heute keine Termine.')}</div></div>
+    <div class="isec"><h3>Nächste 7 Tage</h3><div class="ilist">${next.map(terminRow).join('')||empty('Keine Termine in den nächsten Tagen.')}</div></div>
+    <div class="isec"><h3>Aufgaben</h3><div class="ilist">${open.slice(0,8).map(taskRow).join('')||empty('Keine offenen Aufgaben.')}</div></div>
+    <div class="isec"><h3>Laufende Aufträge</h3><div class="igrid">${run.map(aCard).join('')||empty('Noch keine laufenden Aufträge.')}</div></div>`;}
+  else if(TAB==='auftraege'){head('Projekte','Aufträge',newBtn('auftraege'));
+    if(!D.auftraege.length)h=empty('Noch keine Aufträge. Lege oben deinen ersten Auftrag an – mit Kunde, Adresse, Fläche, Plänen, Grundrissen und Fotos.');
+    else h=STATUS.map(st=>{const L=D.auftraege.filter(a=>(a.status||'Anfrage')===st);return L.length?`<div class="isec"><h3>${st} <span class="tag">${L.length}</span></h3><div class="igrid">${L.map(aCard).join('')}</div></div>`:'';}).join('');}
+  else if(TAB==='kalkulation'){head('Zahlen','Kalkulation','');
+    const L=D.auftraege;const tot=L.reduce((s,a)=>s+sumPos(a),0);
+    h=`<div class="kpis"><div class="kpi"><small>Aufträge</small><b>${L.length}</b></div><div class="kpi"><small>Summe aller Kalkulationen (netto)</small><b>${eur(tot)}</b></div></div>
+    <div class="isec"><h3>Kalkulation je Auftrag</h3><div class="ilist">${L.map(a=>{const s=sumPos(a),f=num(a.flaeche);return `<div class="irow" data-open="${a.id}" data-kalk="1"><span class="m"><b>${esc(a.titel)}</b><small>${esc([a.status,a.art,(a.pos||[]).length+' Positionen'].filter(Boolean).join(' · '))}</small></span><span class="d" style="text-align:right">${eur(s)}${f&&s?'<br>'+eur(s/f)+' / m²':''}</span></div>`;}).join('')||empty('Lege zuerst einen Auftrag an – die Kalkulation steckt im Auftrag.')}</div></div>
+    <div class="isec"><h3>Schnellrechner pro m²</h3><div class="kwrap" style="padding:14px"><div class="iform" style="grid-template-columns:repeat(3,minmax(0,1fr))"><label>Fläche (m²)<input id="qrF" inputmode="decimal"></label><label>Preis pro m² (€)<input id="qrP" inputmode="decimal" value="${esc(SET.standardPreis||'')}"></label><label>Ergebnis netto<input id="qrR" readonly></label></div></div></div>`;}
+  else if(TAB==='termine'){head('Kalender','Termine',newBtn('termine'));const up=sortT(D.termine.filter(t=>t.datum>=T)),past=sortT(D.termine.filter(t=>t.datum<T)).reverse().slice(0,15);
+    h=`<div class="ilist">${up.map(terminRow).join('')||empty('Keine anstehenden Termine.')}</div>${past.length?`<div class="isec"><h3>Vergangen</h3><div class="ilist" style="opacity:.6">${past.map(terminRow).join('')}</div></div>`:''}`;}
+  else if(TAB==='aufgaben'){head('To-do','Aufgaben',newBtn('aufgaben'));const L=D.aufgaben;
+    h=[4,3,2,1].map(p=>{const X=L.filter(t=>!t.erledigt&&String(t.prio||2)===String(p));return X.length?`<div class="isec"><h3>${PRIO[p-1][1]}</h3><div class="ilist">${X.map(taskRow).join('')}</div></div>`:'';}).join('')||empty('Keine offenen Aufgaben.');
+    const done=L.filter(t=>t.erledigt);if(done.length)h+=`<div class="isec"><h3>Erledigt</h3><div class="ilist">${done.slice(0,20).map(taskRow).join('')}</div></div>`;}
+  else if(TAB==='gruendung'){head('Firma aufbauen','Gründung',newBtn('gruendung'));const L=D.gruendung.slice().sort((a,b)=>(a.order||0)-(b.order||0));const d=L.filter(x=>x.erledigt).length;
+    h=`<div class="kpis"><div class="kpi"><small>Erledigt</small><b class="red">${d} / ${L.length}</b></div></div><div class="isec"><div class="ilist">${L.map(x=>`<div class="irow${x.erledigt?' done':''}" data-edit="gruendung:${x.id}"><input type="checkbox" data-done="gruendung:${x.id}" ${x.erledigt?'checked':''} aria-label="Erledigt"><span class="m"><b>${esc(x.titel)}</b><small>${esc([x.faellig?'bis '+dShort(x.faellig):'',x.notiz].filter(Boolean).join(' · '))}</small></span></div>`).join('')||empty('Noch keine Schritte.')}</div></div>`;}
+  else if(TAB==='marke'){head('Marke · Version 1 · 29.10.2026','Marke & Ausstattung','');const g=D.gruendung.find(x=>/marken/i.test(x.titel||''));
+    B.innerHTML=g?`<div class="irow${g.erledigt?' done':''}" data-edit="gruendung:${g.id}" style="margin-bottom:18px"><input type="checkbox" data-done="gruendung:${g.id}" ${g.erledigt?'checked':''} aria-label="Erledigt"><span class="m"><b>${esc(g.titel)}</b><small>${g.erledigt?'erledigt':'noch offen – steht auch unter Gründung'}</small></span></div>`:'';
+    BRAND.forEach(n=>B.append(n));wire(B);return;}
+  else if(TAB==='einstellungen'){head('Board','Einstellungen','');
+    h=`<form class="iform" id="setForm"><div class="note" style="font-size:11px;letter-spacing:.3em;text-transform:uppercase;color:var(--accent)">Kontakt – erscheint bei Kunden unter „Kontakt“</div>
+      <label>Ansprechpartner<input name="kontaktName" value="${esc(SET.kontaktName||'')}" placeholder="z. B. Mustafa …"></label><label>Telefon<input name="telefon" type="tel" value="${esc(SET.telefon||'')}"></label>
+      <label>E-Mail<input name="email" type="email" value="${esc(SET.email||'')}"></label><label>Standard-Linie: ab … € pro m² (optional)<input name="standardPreis" inputmode="decimal" value="${esc(SET.standardPreis||'')}"></label>
+      <label class="w">Adresse<textarea name="adresse" style="min-height:70px">${esc(SET.adresse||'')}</textarea></label>
+      <div class="fbar"><span></span><button class="ibtn red" type="submit">Speichern</button></div></form>
+      <div class="isec"><h3>PIN für den internen Bereich</h3><p class="lead" style="font-size:13px">Wenn du eine PIN setzt, fragt das Board danach, bevor es von „Kunden“ auf „Intern“ wechselt. So kannst du das Board bei Kunden offen lassen.</p>
+      <form class="pinline" id="pinSet" style="max-width:420px;margin-top:12px"><input id="pinNew" type="password" inputmode="numeric" pattern="[0-9]*" maxlength="8" placeholder="${SET.pin?'neue PIN':'PIN'}" aria-label="Neue PIN"><button class="ibtn red" type="submit">${SET.pin?'Ändern':'Setzen'}</button>${SET.pin?'<button class="ibtn" type="button" id="pinOff">Entfernen</button>':''}</form></div>`;}
+  else if(C[TAB]){const c=TAB;head(c==='referenzen'||c==='materialien'?'Für Kunden':'Firma',C[c].t,newBtn(c));let L=D[c].slice();
+    if(c==='kartei'){const kats=[...new Set(L.map(x=>x.kategorie||'Sonstige'))].sort();h=kats.map(k=>`<div class="isec"><h3>${esc(k)}</h3><div class="igrid">${L.filter(x=>(x.kategorie||'Sonstige')===k).sort((a,b)=>String(a.name).localeCompare(b.name)).map(x=>genericCard(c,x)).join('')}</div></div>`).join('');}
+    else if(c==='materialien'){const kats=MATKAT.filter(k=>L.some(m=>(m.kategorie||'Sonstiges')===k));h=kats.map(k=>`<div class="isec"><h3>${esc(k)}</h3><div class="igrid">${L.filter(x=>(x.kategorie||'Sonstiges')===k).map(x=>genericCard(c,x)).join('')}</div></div>`).join('');}
+    else h=`<div class="igrid">${L.map(x=>genericCard(c,x)).join('')}</div>`;
+    if(!L.length)h=empty({kartei:'Noch keine Kontakte. Steuerberater, Notar, Investoren, Lieferanten und Handwerker kommen hier rein.',unterlagen:'Noch keine Unterlagen. Lade Verträge, Bescheide und Notar-Urkunden hoch.',konten:'Noch keine Konten oder Karten.',ideen:'Noch keine Ideen.',referenzen:'Noch keine Referenzen. Was du hier anlegst und „Kunden zeigen“ anhakst, erscheint in der Kundenansicht.',materialien:'Noch keine Materialien. Parkett, Fliesen, Marmor & Co. mit Foto anlegen – die Kunden sehen sie unter „Materialien“ (ohne Preise).'}[c]||'Noch leer.');
+    if(C[c].note)h=`<p class="lead" style="font-size:12px;margin-bottom:14px">${C[c].note}</p>`+h;}
+  B.innerHTML=h;wire(B);}
+
+function wire(B){
+  $('iActs').querySelectorAll('[data-new]').forEach(b=>b.onclick=()=>edit(b.dataset.new));
+  B.querySelectorAll('[data-stop]').forEach(a=>a.addEventListener('click',e=>e.stopPropagation()));
+  B.querySelectorAll('[data-edit]').forEach(el=>el.onclick=e=>{if(e.target.closest('input,a'))return;const [c,id]=el.dataset.edit.split(':');edit(c,id);});
+  B.querySelectorAll('[data-done]').forEach(cb=>cb.onchange=()=>{const [c,id]=cb.dataset.done.split(':');patch(c,id,{erledigt:cb.checked});});
+  B.querySelectorAll('[data-open]').forEach(el=>el.onclick=()=>{DETAIL=el.dataset.open;KALK=el.dataset.kalk?1:0;render();$('iBody').parentElement.scrollTop=0;});
+  const qr=()=>{const r=num($('qrF').value)*num($('qrP').value);$('qrR').value=r?eur(r):'';};if($('qrF')){$('qrF').oninput=qr;$('qrP').oninput=qr;}
+  if($('setForm'))$('setForm').onsubmit=e=>{e.preventDefault();const f=new FormData(e.target);const o={};f.forEach((v,k)=>o[k]=String(v).trim());saveSet(o).then(()=>toast('Gespeichert'));};
+  if($('pinSet'))$('pinSet').onsubmit=async e=>{e.preventDefault();const v=$('pinNew').value.trim();if(!/^\d{4,8}$/.test(v)){toast('Bitte 4 bis 8 Ziffern');return;}await saveSet({pin:await hash(v)});toast('PIN gesetzt');};
+  if($('pinOff'))$('pinOff').onclick=async()=>{const s=Object.assign({},SET);delete s.pin;SET=s;if(db)await db.doc('einstellungen/board').set(s);else render();toast('PIN entfernt');};}
+
+/* ---------- Auftrag im Detail ---------- */
+function renderAuftrag(){const a=D.auftraege.find(x=>x.id===DETAIL);if(!a){DETAIL=null;return render();}
+  head([a.art,a.status].filter(Boolean).join(' · ')||'Auftrag',a.titel,`<button class="ibtn ghost" id="aBack">← Zurück</button><button class="ibtn" id="aEdit">Bearbeiten</button>`);
+  const s=sumPos(a),f=num(a.flaeche),inv=num(a.kaufpreis)||num(a.verkaufspreis);
+  const info=[['Kunde',a.kunde],['Adresse',a.adresse?`<a href="https://maps.apple.com/?q=${encodeURIComponent(a.adresse)}" target="_blank" rel="noopener">${esc(a.adresse)}</a>`:'',1],['Wohnfläche',a.flaeche?a.flaeche+' m²':''],['Zeitraum',[a.start?dShort(a.start):'',a.ende?dShort(a.ende):''].filter(Boolean).join(' – ')],['Budget',(a.budgetVon||a.budgetBis)?[a.budgetVon?'ab '+eur(num(a.budgetVon)):'',a.budgetBis?'bis '+eur(num(a.budgetBis)):''].filter(Boolean).join(' '):''],['Investor / Partner',a.investor],['Notizen',a.notiz]].filter(x=>x[1]);
+  const files=a.dateien||[];const tasks=D.aufgaben.filter(t=>t.auftrag===a.id),ter=sortT(D.termine.filter(t=>t.auftrag===a.id));
+  const pos=a.pos||[];
+  let h=`${info.length?`<div class="dl2">${info.map(([k,v,raw])=>`<div><small>${k}</small><span>${raw?v:esc(v)}</span></div>`).join('')}</div>`:''}
+  <div class="isec"><h3>Kalkulation <span><button class="ibtn sm" id="pAdd">+ Position</button></span></h3>
+   <div class="kwrap"><table class="kalk"><thead><tr><th style="min-width:180px">Position</th><th class="n" style="width:90px">Menge</th><th style="width:104px">Einheit</th><th class="n" style="width:110px">EP (€)</th><th class="n" style="width:110px">Gesamt</th><th style="width:34px"></th></tr></thead><tbody id="pBody">${pos.map((p,i)=>`<tr data-i="${i}"><td><input data-k="bez" value="${esc(p.bez||'')}" placeholder="z. B. Parkett Fischgrät verlegen"></td><td class="n"><input data-k="menge" inputmode="decimal" placeholder="Menge" value="${esc(p.menge||'')}"></td><td><input data-k="einheit" value="${esc(p.einheit||'m²')}" list="einh"></td><td class="n"><input data-k="ep" inputmode="decimal" placeholder="EP €" value="${esc(p.ep||'')}"></td><td class="n" data-sum>${eur2(num(p.menge)*num(p.ep))}</td><td><button class="x" data-x="${i}" aria-label="Position löschen">✕</button></td></tr>`).join('')}</tbody></table>${pos.length?'':'<p class="hint" style="padding:10px 6px">Noch keine Positionen – tippe auf „+ Position“.</p>'}</div>
+   <datalist id="einh"><option>m²</option><option>lfm</option><option>Stück</option><option>Std.</option><option>pauschal</option></datalist>
+   <div class="sum" id="pSum"></div></div>
+  ${inv?`<div class="isec"><h3>Projektrechnung</h3><div class="sum" id="iSum"></div></div>`:''}
+  <div class="isec"><h3>Pläne, Grundrisse & Fotos <span class="upl"><select id="fKat">${['Plan','Grundriss','Foto','Angebot','Vertrag','Sonstiges'].map(k=>`<option>${k}</option>`).join('')}</select><label class="ibtn sm red" style="cursor:pointer">+ Datei<input type="file" id="fUp" multiple accept="image/*,application/pdf" hidden></label></span></h3>
+   ${files.length?`<div class="files">${files.map((x,i)=>`<div class="fi"><button class="pv" data-f="${i}" ${isImg(x)?`style="background-image:url('${blobUrl(x)}')"`:''}>${isImg(x)?'':'PDF'}</button><div class="nm"><b>${esc(x.kat||'')}</b>${esc(x.name||'')}</div><button class="rm" data-frm="${i}" aria-label="Datei entfernen">✕</button></div>`).join('')}</div>`:empty('Noch keine Dateien. Lade Pläne, Grundrisse und Fotos vom Aufmaß hoch.')}</div>
+  <div class="isec"><h3>Termine <span><button class="ibtn sm" data-newref="termine">+ Termin</button></span></h3><div class="ilist">${ter.map(terminRow).join('')||empty('Keine Termine zu diesem Auftrag.')}</div></div>
+  <div class="isec"><h3>Aufgaben <span><button class="ibtn sm" data-newref="aufgaben">+ Aufgabe</button></span></h3><div class="ilist">${tasks.map(taskRow).join('')||empty('Keine Aufgaben zu diesem Auftrag.')}</div></div>`;
+  const B=$('iBody');B.innerHTML=h;wire(B);
+  $('aBack').onclick=()=>{DETAIL=null;render();};$('aEdit').onclick=()=>edit('auftraege',a.id);
+  B.querySelectorAll('[data-newref]').forEach(b=>b.onclick=()=>edit(b.dataset.newref,null,{auftrag:a.id}));
+  let P=pos.map(p=>Object.assign({},p)),tmr=null;
+  const sums=()=>{const n=P.reduce((s,p)=>s+num(p.menge)*num(p.ep),0);$('pSum').innerHTML=`<div class="kpi"><small>Netto</small><b>${eur2(n)}</b></div><div class="kpi"><small>MwSt. 19 %</small><b>${eur2(n*.19)}</b></div><div class="kpi"><small>Brutto</small><b class="red">${eur2(n*1.19)}</b></div>${f?`<div class="kpi"><small>Netto pro m²</small><b>${eur2(n/f)}</b></div>`:''}`;
+    if($('iSum')){const k=num(a.kaufpreis),nk=num(a.nebenkosten),vk=num(a.verkaufspreis),ges=k+nk+n,g=vk-ges;$('iSum').innerHTML=`<div class="kpi"><small>Kaufpreis</small><b>${eur(k)}</b></div><div class="kpi"><small>Nebenkosten</small><b>${eur(nk)}</b></div><div class="kpi"><small>Sanierung (netto)</small><b>${eur(n)}</b></div><div class="kpi"><small>Gesamtkosten</small><b>${eur(ges)}</b></div>${vk?`<div class="kpi"><small>Verkauf geplant</small><b>${eur(vk)}</b></div><div class="kpi"><small>Gewinn</small><b class="${g<0?'red':''}">${eur(g)}</b></div><div class="kpi"><small>Rendite auf Kosten</small><b>${ges?(g/ges*100).toLocaleString('de-DE',{maximumFractionDigits:1})+' %':'–'}</b></div>`:''}`;}};
+  sums();
+  const store=()=>{clearTimeout(tmr);tmr=setTimeout(()=>{patch('auftraege',a.id,{pos:P});},700);};
+  $('pBody').addEventListener('input',e=>{const tr=e.target.closest('tr');if(!tr)return;const i=+tr.dataset.i;P[i][e.target.dataset.k]=e.target.value;tr.querySelector('[data-sum]').textContent=eur2(num(P[i].menge)*num(P[i].ep));sums();store();});
+  $('pBody').addEventListener('click',e=>{const x=e.target.closest('[data-x]');if(!x)return;P.splice(+x.dataset.x,1);patch('auftraege',a.id,{pos:P});});
+  $('pAdd').onclick=()=>{P.push({bez:'',menge:'',einheit:'m²',ep:''});patch('auftraege',a.id,{pos:P}).then(()=>{setTimeout(()=>{const r=$('pBody').lastElementChild;r&&r.querySelector('input').focus();},150);});};
+  B.querySelectorAll('[data-f]').forEach(b=>b.onclick=()=>{const x=files[+b.dataset.f];if(isImg(x))lightbox(files,+b.dataset.f);else window.open(blobUrl(x),'_blank');});
+  B.querySelectorAll('[data-frm]').forEach(b=>b.onclick=()=>{if(!confirmDel(b))return;const F=files.slice();F.splice(+b.dataset.frm,1);patch('auftraege',a.id,{dateien:F});});
+  $('fUp').onchange=async e=>{const L=[...e.target.files];e.target.value='';if(!L.length)return;const up=await uploadAll(L,$('fKat').value);if(up.length)patch('auftraege',a.id,{dateien:[...(a.dateien||[]),...up]}).then(()=>toast(up.length+' Datei'+(up.length>1?'en':'')+' gespeichert'));};
+  if(KALK){KALK=0;setTimeout(()=>{const k=$('pBody');k&&k.closest('.isec').scrollIntoView({block:'start'});},50);}}
+function confirmDel(b){if(b.dataset.sure)return true;b.dataset.sure=1;b.textContent='?';b.style.borderColor='var(--accent)';setTimeout(()=>{delete b.dataset.sure;b.textContent='✕';b.style.borderColor='';},2500);return false;}
+async function uploadAll(L,kat){if(!assets){toast('Hochladen geht nur im Board in claude.ai');return [];}const out=[];toast('Wird hochgeladen …');
+  for(const f of L){try{const r=await assets.upload(f);out.push({id:r.id,url:r.url,name:f.name,type:r.contentType||f.type,kat});}catch(e){toast('„'+f.name+'“ konnte nicht hochgeladen werden');}}return out;}
+
+/* ---------- Formular ---------- */
+let ED=null;
+function edit(c,id,preset){const cfg=C[c],x=id?D[c].find(r=>r.id===id)||{}:Object.assign({},preset||{});ED={c,id,files:{}};
+  $('iedSub').textContent=cfg.t;$('iedTitle').textContent=id?(x[cfg.f[0][0]]||cfg.one):'Neu: '+cfg.one;
+  const fld=([k,l,t,o])=>{o=o||{};const v=x[k]!=null?x[k]:(o.def!=null&&!id?o.def:'');const w=o.w?' w':'';
+    if(t==='area')return `<label class="${w}">${l}<textarea name="${k}" placeholder="${esc(o.ph||'')}">${esc(v)}</textarea></label>`;
+    if(t==='sel')return `<label class="${w}">${l}<select name="${k}"><option value="">–</option>${o.o.map(op=>{const [val,lab]=Array.isArray(op)?op:[op,op];return `<option value="${esc(val)}" ${String(v)===String(val)?'selected':''}>${esc(lab)}</option>`;}).join('')}</select></label>`;
+    if(t==='ref')return `<label class="${w}">${l}<select name="${k}"><option value="">–</option>${D[o.c].map(r=>`<option value="${r.id}" ${v===r.id?'selected':''}>${esc(r.titel||r.name)}</option>`).join('')}</select></label>`;
+    if(t==='check')return `<label class="ck${w}"><input type="checkbox" name="${k}" ${v===true||v==='on'?'checked':''}> ${l}</label>`;
+    if(t==='files'){ED.files[k]=(x[k]||[]).slice();return `<div class="${o.w?'w ':''}" style="grid-column:1/-1;display:flex;flex-direction:column;gap:8px"><span style="font-size:10px;letter-spacing:.25em;text-transform:uppercase;color:var(--dim)">${l}</span><div class="files" data-fl="${k}"></div><span class="upl">${o.k&&!o.one?`<select data-fk="${k}">${o.k.map(z=>`<option>${z}</option>`).join('')}</select>`:''}<label class="ibtn sm" style="cursor:pointer">+ ${o.one?'Foto':'Datei'}<input type="file" data-fu="${k}" ${o.one?'':'multiple'} accept="${o.one?'image/*':'image/*,application/pdf'}" hidden></label></span></div>`;}
+    const ty={num:'text',tel:'tel',email:'email',url:'url',date:'date',time:'time'}[t]||'text';
+    return `<label class="${w}">${l}<input name="${k}" type="${ty}" ${t==='num'?'inputmode="decimal"':''} value="${esc(v)}" placeholder="${esc(o.ph||'')}" ${o.max?`maxlength="${o.max}"`:''} ${o.req?'required':''}></label>`;};
+  $('iedForm').innerHTML=cfg.f.map(fld).join('')+(cfg.note?`<p class="note">${cfg.note}</p>`:'')+`<div class="fbar">${id?'<button type="button" class="ibtn" id="iedDel">Löschen</button>':'<span></span>'}<button type="submit" class="ibtn red">Speichern</button></div>`;
+  const paintF=k=>{const box=$('iedForm').querySelector(`[data-fl="${k}"]`);const L=ED.files[k];box.innerHTML=L.map((f,i)=>`<div class="fi"><button type="button" class="pv" ${isImg(f)?`style="background-image:url('${blobUrl(f)}')"`:''}>${isImg(f)?'':'PDF'}</button><div class="nm"><b>${esc(f.kat||'')}</b>${esc(f.name||'')}</div><button type="button" class="rm" data-rm="${i}" aria-label="Entfernen">✕</button></div>`).join('');
+    box.querySelectorAll('[data-rm]').forEach(b=>b.onclick=()=>{L.splice(+b.dataset.rm,1);paintF(k);});};
+  Object.keys(ED.files).forEach(paintF);
+  $('iedForm').querySelectorAll('[data-fu]').forEach(inp=>inp.onchange=async e=>{const k=inp.dataset.fu,o=(cfg.f.find(z=>z[0]===k)[3])||{};const ks=$('iedForm').querySelector(`[data-fk="${k}"]`);const up=await uploadAll([...e.target.files],ks?ks.value:(o.k?o.k[0]:''));e.target.value='';if(o.one)ED.files[k]=up.slice(0,1);else ED.files[k].push(...up);paintF(k);});
+  if(id)$('iedDel').onclick=e=>{const b=e.target;if(!b.dataset.sure){b.dataset.sure=1;b.textContent='Wirklich löschen?';b.classList.add('red');return;}del(c,id).then(()=>{closeSheets();if(c==='auftraege'&&DETAIL===id){DETAIL=null;render();}toast('Gelöscht');});};
+  openSheet('ied');setTimeout(()=>{const f=$('iedForm').querySelector('input:not([type=checkbox]),textarea');f&&!id&&f.focus();},400);}
+$('iedForm').onsubmit=async e=>{e.preventDefault();const {c,id}=ED,cfg=C[c],fm=e.target;const req=cfg.f.find(z=>(z[3]||{}).req&&!String(fm.elements[z[0]].value).trim());if(req){fm.elements[req[0]].focus();toast('Bitte „'+req[1]+'“ ausfüllen');return;}
+  const cur=id?Object.assign({},D[c].find(r=>r.id===id)||{}):{};delete cur.id;
+  cfg.f.forEach(([k,l,t])=>{if(t==='files')cur[k]=ED.files[k]||[];else if(t==='check')cur[k]=fm.elements[k].checked;else cur[k]=String(fm.elements[k].value).trim();});
+  if(!id){cur.erstellt=Date.now();if(c==='gruendung')cur.order=Date.now();}
+  const btn=fm.querySelector('[type=submit]');btn.disabled=true;
+  try{await save(c,id,cur);closeSheets();toast('Gespeichert');}catch(err){}btn.disabled=false;};
+
+/* ---------- Suche ---------- */
+function hitsFor(q){q=q.trim().toLowerCase();if(q.length<2)return [];const out=[];
+  if(MODE==='intern'||!SET.pin){Object.keys(C).forEach(c=>D[c].forEach(x=>{const txt=Object.values(x).filter(v=>typeof v==='string').join(' ').toLowerCase();if(txt.includes(q))out.push({c,x});}));}
+  return out.slice(0,12);}
+function search(q){const H=hitsFor(q),el=$('hits');const slides=S.map((s,i)=>({s,i})).filter(({s})=>q.trim().length>1&&s.k.toLowerCase().includes(q.trim().toLowerCase()));
+  el.innerHTML=slides.map(({s,i})=>`<div class="irow" data-slide="${i}"><span class="d">Reiter</span><span class="m"><b>${esc(s.k)}</b><small>${esc(s.sub)}</small></span></div>`).join('')+
+   H.map(({c,x},i)=>`<div class="irow" data-hit="${i}"><span class="d">${esc(C[c].one)}</span><span class="m"><b>${esc(x.titel||x.name||x.bezeichnung)}</b><small>${esc([x.kunde,x.firma,x.adresse,x.kategorie,x.datum?dShort(x.datum):''].filter(Boolean).join(' · '))}</small></span></div>`).join('');
+  el.querySelectorAll('[data-slide]').forEach(r=>r.onclick=()=>{closeSheets();if(MODE==='intern')setMode('kunden');go(+r.dataset.slide);});
+  el.querySelectorAll('[data-hit]').forEach(r=>r.onclick=()=>{const {c,x}=H[+r.dataset.hit];closeSheets();openItem(c,x);});
+  return slides.length+H.length;}
+function openItem(c,x){if(MODE!=='intern'){setMode('intern');if(MODE!=='intern')return;}
+  if(c==='auftraege'){TAB='auftraege';DETAIL=x.id;render();}else{TAB=c;DETAIL=null;render();setTimeout(()=>edit(c,x.id),200);}}
+function searchEnter(q){const H=hitsFor(q);if(H.length===1){closeSheets();openItem(H[0].c,H[0].x);return true;}if(H.length>1)return true;
+  const words={heute:'heute',termin:'termine',aufgabe:'aufgaben',auftr:'auftraege',kalk:'kalkulation',kartei:'kartei',kontakt:'kartei',unterlag:'unterlagen',bank:'konten',karte:'konten',konto:'konten',gründ:'gruendung',grund:'gruendung',idee:'ideen',referenz:'referenzen',material:'materialien',einstell:'einstellungen'};
+  const w=Object.keys(words).find(k=>q.includes(k));if(w&&(MODE==='intern'||/termin|aufgabe|auftr|kalk|unterlag|bank|konto|gründ|idee|einstell/.test(w))){closeSheets();setMode('intern');if(MODE==='intern'){TAB=words[w];DETAIL=null;render();}return true;}
+  return false;}
+
+/* ---------- Start ---------- */
+let m0='kunden';try{m0='kunden';if(localStorage.getItem('mo-pin'))m0='kunden';}catch(e){}
+init();
+setTimeout(()=>{if(m0==='intern')setMode('intern',!0);},0);
+/* Wenn eine PIN eingerichtet ist, startet das Board immer in der Kundenansicht */
+const _r=render;
+let unlocked=false;
+render=function(){try{localStorage.setItem('mo-pin',SET.pin?'1':'');}catch(e){}
+  if(SET.pin&&MODE==='intern'&&!unlocked){setMode('kunden');return;}
+  const ae=document.activeElement;if(MODE==='intern'&&DETAIL&&ae&&ae.tagName==='INPUT'&&ae.closest('#pBody')){nav();return;}_r();};
+return {kunde:s=>kunde(s),search,searchEnter,setMode,get mode(){return MODE;}};
+})();
+</script>
+
+</body></html>
