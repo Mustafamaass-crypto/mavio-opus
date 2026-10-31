@@ -12,6 +12,9 @@
 <meta name="theme-color" content="#070707">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@200;300;400;500;700&family=Bodoni+Moda:ital,opsz,wght@0,6..96,400..900;1,6..96,400..900&family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;1,400;1,500&display=swap">
 <style>
+@font-face{font-family:'MO V';font-style:normal;font-weight:100 900;src:url(data:font/woff2;base64,d09GMgABAAAAAALkABAAAAAABogAAAKKAAEAAAAAAAAAAAAAAAAAAAAAAAAAAAAAGhYbfhwqBmA/U1RBVF4APBEICniBAAE2AiQDDAsIAAQgBYUEByAMBxtwBREVnMsgvjjgydBHZ4gMVq1xpNn3IrSf8Drv3MfD93Z8nfte90iKyVBQ/LOBsSJCpVuTbVUHQJ2AL60NSWURlwRNJZ/s7MV2WP9vj+v2ea6phwd6fPfv2uyMKhZcATTwKBvZgDptArNRPW/QEeHUXb+6kvJw5+tOJtAAEEISQqCeQYZL4ydOn6HRhqU7NmmjgAptcCDWr9y2SR0MlEIShjqSDt+nhwGSDNUAITERFpkA1PXS53CAolgUR5SULYqncGrZTnrNsNSHImCytTv6dfGWWXbV+eT/+t3mLgjIZ8rf0EUWQh0ZLWQMkDZv2b4vCnavXrMjsli7Y+mGaC6ppZluAqKB+shCijKOkF5DlqRoAQIkAvhRhIU+qBULCWKhAp1bdb86IAAhKhqDDGohoROGAQpAiMaN96u3p96+etFYvb3764WFaEiuXd9h3srfej/suvKbQV2mizhrfO8v23z3Wfvxnz0x/NkzdrT6r6bZunvNlt5/9r6brze7/iwgkGLy4PdXHF/cePiTOrn2V/Drh00OwV/1r02sql7eKn9DLQkEqY+WXzmQclrQDiAXT/meJFrlL6rorLFoEXRZQ9eyKOriNVuELl5D0shvyEb7F4Uh0Q+ldjGPqWVA7FBE1iCuoNAmHqDUyG9ooE68h+YaxGfHtVAvfjLOlaS/3GpDMOiN/xPuBmGdyCS2cEgkg3OeOBQEK08myQuoGaK0WHS72pLxvCOSqGtjiQXlXpDlIbbpl2IXSnN1YL/b76d0Re1Dlg86vd54aamxfMQSS+q0qbSA9aDGn5gI316rAgjlC5x+4ef4J6f1VrAQCvvH6/ENHWrsX5P7MBZXobpgoMUvRVXzVHEQAAA=) format('woff2');unicode-range:U+0056,U+0076}
+/* V/v klar lesbar: im kursiven Bodoni sah das v wie ein r aus – hier wird nur das V/v aus dem aufrechten Bodoni genommen (leicht schräg gestellt) */
+
 :root{--bg:#060606;--bgrgb:6,6,6;--ink:#f2efe9;--dim:#a9a49c;--line:rgba(242,239,233,.2);--accent:#d8d2c6;--lightc:255,244,228;
   --rf:grayscale(1) contrast(1.1) brightness(.55);--ff:grayscale(1) contrast(1.06);--serif:'Cormorant Garamond',Garamond,Georgia,serif;--sans:'Manrope','Helvetica Neue',Arial,sans-serif;color-scheme:dark}
 *{box-sizing:border-box}
@@ -148,7 +151,7 @@ body.v1 #rooms{display:block}
 body.v1 #cap{left:max(48px,env(safe-area-inset-left,0px));bottom:calc(env(safe-area-inset-bottom,0px) + 130px);max-width:min(420px,34vw)}
 
 /* =============== 2 · DURCHGANG – man geht durch die Räume =============== */
-body.v2{--bg:#0b0405;--bgrgb:11,4,5;--accent:#c4243a;--lightc:255,225,215;--rf:grayscale(1) contrast(1.15) brightness(.5);--serif:'Bodoni Moda',Didot,Georgia,serif}
+body.v2{--bg:#0b0405;--bgrgb:11,4,5;--accent:#c4243a;--lightc:255,225,215;--rf:grayscale(1) contrast(1.15) brightness(.5);--serif:'MO V','Bodoni Moda',Didot,Georgia,serif}
 body.v2 #rooms{display:block}
 body.v2 .shade{background:radial-gradient(120% 90% at 50% 50%,rgba(0,0,0,0) 40%,rgba(11,4,5,.85) 100%),linear-gradient(180deg,rgba(11,4,5,.5),rgba(11,4,5,0) 25%,rgba(11,4,5,0) 60%,rgba(11,4,5,.9))}
 body.v2 #cap{left:50%;transform:translateX(-50%);top:calc(env(safe-area-inset-top,0px) + 118px);align-items:center;text-align:center;width:min(760px,90vw)}
@@ -158,7 +161,7 @@ body.v2 #cap button{align-self:center}
 body.v2 #cap .num::after{content:"";display:block;width:40px;height:1px;background:var(--accent);margin:12px auto 0}
 
 /* =============== 3 · PORTAL – Raum im Bogen =============== */
-body.v3{--bg:#070707;--bgrgb:7,7,7;--accent:#ff1e3c;--red:255,30,60;--lightc:255,244,232;--rf:saturate(1.08) contrast(1.06) brightness(.82);--serif:'Bodoni Moda',Didot,Georgia,serif}
+body.v3{--bg:#070707;--bgrgb:7,7,7;--accent:#ff1e3c;--red:255,30,60;--lightc:255,244,232;--rf:saturate(1.08) contrast(1.06) brightness(.82);--serif:'MO V','Bodoni Moda',Didot,Georgia,serif}
 body.v3 #portal{box-shadow:0 0 0 1px rgba(255,255,255,.16),0 40px 120px rgba(0,0,0,.75)}
 body.v3 #amb::after{content:"";position:absolute;inset:0;background:linear-gradient(180deg,rgba(7,7,7,.2),rgba(7,7,7,.5))}
 body.v3 #cap h1{font-style:italic;font-weight:400}
@@ -184,7 +187,7 @@ body.v5{--bg:#030303;--bgrgb:3,3,3;--accent:#ffffff;--lightc:255,250,240;--rf:gr
 body.v5 #rooms,body.v5 #reveal{display:block}
 body.v5 #cap{left:max(100px,env(safe-area-inset-left,0px));top:50%;transform:translateY(-50%);max-width:min(520px,40vw)}
 body.v5 #cap h1{font-family:'Manrope',sans-serif;font-weight:200;text-transform:uppercase;letter-spacing:.12em;font-size:clamp(30px,4.4vw,76px);line-height:1}
-body.v5 #cap .ini{font-family:'Bodoni Moda',serif;font-style:italic;font-size:120px;line-height:.7;color:transparent;-webkit-text-stroke:1px rgba(255,255,255,.55)}
+body.v5 #cap .ini{font-family:'MO V','Bodoni Moda',serif;font-style:italic;font-size:120px;line-height:.7;color:transparent;-webkit-text-stroke:1px rgba(255,255,255,.55)}
 #cap .ini{display:none}
 body.v5 #cap .ini{display:block}
 body.v5 .light{background:radial-gradient(30vmax 26vmax at var(--lx,50%) var(--ly,35%),rgba(var(--lightc),calc(.06 + var(--pulse,0)*.2)),rgba(var(--lightc),0) 70%)}
