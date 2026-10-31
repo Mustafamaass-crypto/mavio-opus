@@ -684,7 +684,8 @@ setVar(3);
 requestAnimationFrame(frame);
 /* ---------- Musik: Auswahl über den Lautsprecher-Knopf – startet beim Öffnen (oder beim ersten Antippen, falls der Browser das verlangt) ---------- */
 (function(){const a=$('music'),btn=$('musicBtn'),pk=$('mpick');let off=false,fadeT=null,tr='mond';
-  const TR=[['#','Klassik'],['satie','Satie – Gymnopédie Nr. 1','Klavier solo – ruhig, minimalistisch','musik/satie.mp3'],
+  const TR=[['#','Klassik'],['goldberg','Bach – Goldberg-Aria (Hannibal)','Klavier – die Musik aus „Hannibal“, still und edel','musik/goldberg_aria.mp3'],
+    ['satie','Satie – Gymnopédie Nr. 1','Klavier solo – ruhig, minimalistisch','musik/satie.mp3'],
     ['clair','Debussy – Clair de lune','Klavier – weich, fließend, wie Mondlicht','musik/clair-de-lune.mp3'],
     ['air','Bach – Air','Klavierfassung – zeitlos, getragen','musik/air.mp3'],
     ['mond','Beethoven – Mondscheinsonate','1. Satz – dunkel, tief, still','musik/mondschein.mp3'],
@@ -1006,7 +1007,7 @@ const WINDOW=15000;
 let on=true,rec=null,running=false,awakeUntil=0,done=0,deb=null,lastRun='',lastRunAt=0,tick=null;
 try{on=localStorage.getItem('mo-stimme')!=='aus';}catch(e){}
 const WAKE=/\b(mavio|mavi|maveo|mabio|navio|mario|marvio|maviu|mavyo|mavie|may vio|ma vio|mavio s)\b/;
-const norm=s=>s.toLowerCase().normalize('NFC').replace(/[.,!?;:„“"']/g,' ').replace(/\s+/g,' ').trim();
+const norm=s=>s.toLowerCase().normalize('NFC').replace(/[.,!?;:„“"'()]/g,' ').replace(/\s+/g,' ').trim();
 const awake=()=>Date.now()<awakeUntil;
 function pillShow(label,text,keep){pill.innerHTML=`<b>${label}</b>${text||''}`;pill.classList.add('on');clearTimeout(pill._t);if(!keep)pill._t=setTimeout(()=>{if(!awake())pill.classList.remove('on');},2600);}
 function status(){if(!awake()){btn.classList.remove('wake');return;}btn.classList.add('wake');const s=Math.max(0,Math.ceil((awakeUntil-Date.now())/1000));
