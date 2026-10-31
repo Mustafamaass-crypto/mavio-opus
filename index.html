@@ -996,52 +996,93 @@ return {kunde:s=>kunde(s),search,searchEnter,setMode,get mode(){return MODE;}};
 
 <div class="vpill" id="vpill" role="status"></div>
 <script>
-/* ================= Sprachsteuerung: „Mavio, …“ ================= */
+/* ================= Sprachsteuerung: „Mavio, …“ =================
+   „Mavio“ öffnet ein Zuhör-Fenster von 15 Sekunden. Jeder erkannte Befehl verlängert es wieder auf 15 Sekunden,
+   man kann also mehrere Befehle hintereinander sagen. Nach 15 Sekunden Stille schließt es sich. */
 (function(){
 const SR=window.SpeechRecognition||window.webkitSpeechRecognition,btn=document.getElementById('voiceBtn'),pill=document.getElementById('vpill');
 if(!SR||!btn)return;btn.hidden=false;
-let on=true,rec=null,running=false,awakeUntil=0,pillT=null,lastCmd='',lastAt=0;
+const WINDOW=15000;
+let on=true,rec=null,running=false,awakeUntil=0,done=0,deb=null,lastRun='',lastRunAt=0,tick=null;
 try{on=localStorage.getItem('mo-stimme')!=='aus';}catch(e){}
-const WAKE=/\b(mavio|mavi|mavio's|maveo|mabio|navio|mario|marvio|maviu|may vio|ma vio)\b[,.!:]?/i;
-function show(label,text,ms){pill.innerHTML=`<b>${label}</b>${text||''}`;pill.classList.add('on');clearTimeout(pillT);pillT=setTimeout(()=>pill.classList.remove('on'),ms||2200);}
-function ui(){btn.classList.toggle('off',!on);btn.classList.toggle('on',on&&running);btn.classList.toggle('wake',Date.now()<awakeUntil);}
-const norm=s=>s.toLowerCase().normalize('NFC').replace(/[.,!?]/g,' ').replace(/\s+/g,' ').trim();
-const SLIDES=[[/(start|anfang|übersicht|startseite|mavio opus|willkommen|home)/,0],[/referenz/,1],[/material/,2],[/gestalt|design/,3],[/investor/,4],[/ablauf|so arbeiten/,5],[/komplett/,6],[/standard/,7],[/kontakt|termin vereinbaren|telefon/,8]];
+const WAKE=/\b(mavio|mavi|maveo|mabio|navio|mario|marvio|maviu|mavyo|mavie|may vio|ma vio|mavio s)\b/;
+const norm=s=>s.toLowerCase().normalize('NFC').replace(/[.,!?;:„“"']/g,' ').replace(/\s+/g,' ').trim();
+const awake=()=>Date.now()<awakeUntil;
+function pillShow(label,text,keep){pill.innerHTML=`<b>${label}</b>${text||''}`;pill.classList.add('on');clearTimeout(pill._t);if(!keep)pill._t=setTimeout(()=>{if(!awake())pill.classList.remove('on');},2600);}
+function status(){if(!awake()){btn.classList.remove('wake');return;}btn.classList.add('wake');const s=Math.max(0,Math.ceil((awakeUntil-Date.now())/1000));
+  const t=pill.querySelector('.vs');if(t)t.textContent=` · ${s} s`;}
+function wake(){awakeUntil=Date.now()+WINDOW;clearInterval(tick);tick=setInterval(()=>{status();if(!awake()){clearInterval(tick);pillShow('Mavio','hört nicht mehr zu – sag wieder „Mavio“');}},250);}
+function listening(extra){pill.innerHTML=`<b>Mavio hört zu<span class="vs"></span></b>${extra||'Sag z. B. „nach rechts“, „letzte Seite“, „Musik aus“'}`;pill.classList.add('on');clearTimeout(pill._t);status();}
+function ui(){btn.classList.toggle('off',!on);btn.classList.toggle('on',on&&running);}
+
+/* ---- Musik ---- */
+const MPK=()=>document.getElementById('mpick');
+function musicBtns(){const pk=MPK();return pk?[...pk.querySelectorAll('button[data-k]')].filter(b=>b.dataset.k!=='aus'):[];}
+function music(c){const pk=MPK();if(!pk)return '';
+  const M='(musik|musi|music|musiek|lied|song|titel|track)';
+  if(new RegExp(`${M}\\s*(aus|ausmachen|stopp?|stop|pause|pausieren|leise|beenden|ende)\\b|(mach|stell|schalt)\\w*\\s+(die\\s+)?${M}\\s+(aus|ab)|^(stopp?|stop|pause|ruhe)( bitte)?$|keine ${M}`).test(c)){
+    const b=pk.querySelector('button[data-k="aus"]');b&&b.click();return 'Musik aus';}
+  if(new RegExp(`(nächste[rsn]?|andere[rsn]?|neue[rsn]?)\\s*${M}|${M}\\s*(weiter|wechseln|ändern|tauschen)|weiter in der liste|nächste[rsn]? in der liste|in der liste weiter|skip`).test(c)){
+    const L=musicBtns();const i=L.findIndex(b=>b.getAttribute('aria-pressed')==='true');const n=L[(i+1)%L.length];if(n){n.click();return 'Musik: '+n.querySelector('b').textContent;}}
+  if(new RegExp(`(vorherige[rsn]?|letzte[rsn]?)\\s*${M}|${M}\\s*zurück`).test(c)){
+    const L=musicBtns();const i=L.findIndex(b=>b.getAttribute('aria-pressed')==='true');const n=L[(i-1+L.length)%L.length];if(n){n.click();return 'Musik: '+n.querySelector('b').textContent;}}
+  if(new RegExp(`${M}\\s*(an|ein|einschalten|anmachen|start|starten|spielen|los)\\b|(spiel|spiele|mach|stell)\\w*\\s+(die\\s+|wieder\\s+)?${M}(\\s+an)?`).test(c)){
+    let k='';try{k=localStorage.getItem('mo-stueck')||'';}catch(e){}const b=pk.querySelector(`button[data-k="${k}"]`)||musicBtns()[0];b&&b.click();return 'Musik an';}
+  /* Stück beim Namen: „spiel Satie“, „Mondscheinsonate“ … */
+  const hit=musicBtns().find(b=>{const n=norm(b.querySelector('b').textContent);return n.split(/[ –-]+/).some(w=>w.length>4&&c.includes(w));});
+  if(hit&&/(spiel|musik|lied|stück|song|titel)/.test(c)){hit.click();return 'Musik: '+hit.querySelector('b').textContent;}
+  return '';}
+
+/* ---- Seiten ---- */
+const ORD={erste:1,zweite:2,dritte:3,vierte:4,fünfte:5,sechste:6,siebte:7,siebente:7,achte:8,neunte:9,zehnte:10};
+const SLIDES=[[/(startseite|übersicht|mavio opus|willkommen|home)/,0],[/referenz/,1],[/material/,2],[/gestalt|design/,3],[/investor/,4],[/ablauf|so arbeiten/,5],[/komplett/,6],[/standard/,7],[/kontakt|termin vereinbaren|telefon/,8]];
 function slideIdx(t){for(const [re,i] of SLIDES){if(re.test(t)){const k=S.findIndex(s=>re.test(s.k.toLowerCase())||re.test((s.sub||'').toLowerCase()));return k>=0?k:i;}}return -1;}
-function music(cmd){const pk=document.getElementById('mpick');if(!pk)return false;
-  if(/musik (aus|stopp|stop|leise)|(stopp|stop|aus) (die )?musik|ruhe/.test(cmd)){const b=pk.querySelector('button[data-k="aus"]');b&&b.click();show('Mavio','Musik aus');return true;}
-  if(/(nächste|andere|neue|weiter)[sn]? (lied|musik|stück|song)|(lied|stück|song) weiter/.test(cmd)){const L=[...pk.querySelectorAll('button[data-k]')].filter(b=>b.dataset.k!=='aus');const i=L.findIndex(b=>b.getAttribute('aria-pressed')==='true');const n=L[(i+1)%L.length];n&&n.click();show('Musik',n?n.querySelector('b').textContent:'');return true;}
-  if(/musik (an|ein|start|spielen)|spiel(e)? musik/.test(cmd)){let k='';try{k=localStorage.getItem('mo-stueck')||'';}catch(e){}const b=pk.querySelector(`button[data-k="${k}"]`)||pk.querySelector('button[data-k]:not([data-k="aus"])');b&&b.click();show('Mavio','Musik an');return true;}
-  return false;}
-function run(cmd){cmd=norm(cmd);if(!cmd)return false;const now=Date.now();if(cmd===lastCmd&&now-lastAt<1200)return true;
-  if(music(cmd)){lastCmd=cmd;lastAt=now;return true;}
-  let did='';
-  if(/(schließ|schliess|zu machen|zumachen|ausblenden|weg damit|zurück zur seite)/.test(cmd)){closeAll();try{closeMenu();}catch(e){}did='Geschlossen';}
-  else if(/(nach rechts|rechts|weiter|nächste|vor\b|vorwärts)/.test(cmd)){closeAll();go(Math.round(tgt)+1);did='Weiter';}
-  else if(/(nach links|links|zurück|vorherige|davor)/.test(cmd)){closeAll();go(Math.round(tgt)-1);did='Zurück';}
-  else if(/(erste|anfang)\b/.test(cmd)&&!/öffne|zeig/.test(cmd)){closeAll();go(0);did='Start';}
-  else if(/letzte/.test(cmd)){closeAll();go(S.length-1);did=S[S.length-1].k;}
-  else if(/(alle reiter|menü|menu|übersicht aller)/.test(cmd)){document.getElementById('menuBtn').click();did='Alle Reiter';}
-  else{const k=slideIdx(cmd);if(k>=0){closeAll();try{closeMenu();}catch(e){}go(k);did=S[k].k;
-      if(/(öffne|öffnen|aufmachen|mach .* auf|zeig|details|mehr)/.test(cmd))setTimeout(()=>{try{openDetail(S[k]);}catch(e){}},900);}}
-  if(did){lastCmd=cmd;lastAt=now;show('Mavio',did);return true;}
-  return false;}
-function handle(text,final){const t=norm(text);const m=t.match(WAKE);
-  if(m){const rest=t.slice(m.index+m[0].length).trim();awakeUntil=Date.now()+7000;ui();
-    if(rest){if(final){if(!run(rest))show('Nicht verstanden','„'+rest+'“',2600);awakeUntil=0;ui();}else show('Mavio hört',rest,4000);}
-    else show('Mavio hört zu','Sag z. B. „nach rechts“ oder „öffne Ablauf“',7000);return;}
-  if(Date.now()<awakeUntil){if(final){if(!run(t))show('Nicht verstanden','„'+t+'“',2600);awakeUntil=0;ui();}else show('Mavio hört',t,4000);}}
-function start(){if(!on||running)return;try{rec=new SR();rec.lang='de-DE';rec.continuous=true;rec.interimResults=true;rec.maxAlternatives=1;
-  rec.onresult=e=>{for(let i=e.resultIndex;i<e.results.length;i++){handle(e.results[i][0].transcript,e.results[i].isFinal);}};
+function goTo(k,open){closeAll();try{closeMenu();}catch(e){}k=Math.max(0,Math.min(S.length-1,k));go(k);if(open)setTimeout(()=>{try{openDetail(S[k]);}catch(e){}},900);return S[k].k;}
+function one(c){
+  if(!c)return '';
+  const m=music(c);if(m)return m;
+  if(/^(danke|fertig|ende|stopp zuhören|hör auf|nicht mehr zuhören|tschüss)$/.test(c)){awakeUntil=0;status();return 'Okay, ich höre nicht mehr zu';}
+  const open=/(öffne|öffnen|aufmachen|mach\b.*\bauf|zeig|details|mehr dazu|rein)/.test(c);
+  if(/(schließ|schliess|zumachen|zu machen|ausblenden|weg damit|zurück zur seite|fenster zu)/.test(c)){closeAll();try{closeMenu();}catch(e){}return 'Geschlossen';}
+  if(/(letzte|letzten|ende|schluss|hinten)\b/.test(c))return goTo(S.length-1,open);
+  if(/(erste|ersten|anfang|start|vorne)\b/.test(c)&&!/(musik|lied)/.test(c))return goTo(0,open);
+  let n=c.match(/seite\s*(\d+)/);if(n)return goTo(+n[1]-1,open);
+  for(const w in ORD)if(new RegExp(`\\b${w}n?\\b`).test(c))return goTo(ORD[w]-1,open);
+  const k=slideIdx(c);if(k>=0)return goTo(k,open);
+  if(/(alle reiter|menü|menu|übersicht aller)/.test(c)){document.getElementById('menuBtn').click();return 'Alle Reiter';}
+  const steps=(c.match(/(\d+|zwei|drei|vier|fünf) (seiten|mal)/)||[])[1];const nn=steps?({zwei:2,drei:3,vier:4,fünf:5}[steps]||+steps):1;
+  if(/(nach rechts|rechts|weiter|nächste|vorwärts|\bvor\b)/.test(c)){closeAll();go(Math.round(tgt)+nn);return nn>1?nn+' Seiten weiter':'Weiter';}
+  if(/(nach links|links|zurück|vorherige|davor|rückwärts)/.test(c)){closeAll();go(Math.round(tgt)-nn);return nn>1?nn+' Seiten zurück':'Zurück';}
+  return '';}
+function run(text){const parts=norm(text).split(/\b(?:und dann|und danach|danach|dann|und)\b/).map(s=>s.trim()).filter(Boolean);
+  const res=[];for(const p of parts){const r=one(p);if(r)res.push(r);}return res;}
+
+/* ---- Erkennung: nur neue Wörter auswerten (Safari liefert oft den ganzen bisherigen Satz erneut) ---- */
+function onText(full){
+  const t=norm(full);let fresh=t.slice(done).trim();if(t.length<done){done=0;fresh=t;}
+  if(!fresh)return;
+  const m=fresh.match(WAKE);
+  if(m){fresh=fresh.slice(m.index+m[0].length).trim();done=t.length-fresh.length;wake();listening(fresh?'„'+fresh+'“':'');}
+  if(!awake())return;
+  if(fresh)listening('„'+fresh+'“');
+  clearTimeout(deb);deb=setTimeout(()=>{const now=norm(full);const cmd=now.slice(done).replace(WAKE,'').trim();if(!cmd)return;
+    const key=cmd;if(key===lastRun&&Date.now()-lastRunAt<1500){done=now.length;return;}
+    const r=run(cmd);done=now.length;
+    if(r.length){lastRun=key;lastRunAt=Date.now();wake();listening('✓ '+r.join(' · '));}
+    else{wake();listening('Nicht verstanden: „'+cmd+'“');}
+  },850);}
+function start(){if(!on||running)return;try{rec=new SR();rec.lang='de-DE';rec.continuous=true;rec.interimResults=true;rec.maxAlternatives=1;done=0;
+  rec.onresult=e=>{let full='';for(let i=0;i<e.results.length;i++)full+=e.results[i][0].transcript+' ';onText(full);};
   rec.onstart=()=>{running=true;ui();};
-  rec.onend=()=>{running=false;ui();if(on)setTimeout(start,400);};
-  rec.onerror=e=>{if(e.error==='not-allowed'||e.error==='service-not-allowed'){on=false;ui();show('Mikrofon','Bitte das Mikrofon für diese Seite erlauben',4500);}};
+  rec.onend=()=>{running=false;done=0;ui();if(on)setTimeout(start,250);};
+  rec.onerror=e=>{if(e.error==='not-allowed'||e.error==='service-not-allowed'){on=false;ui();pillShow('Mikrofon','Bitte das Mikrofon für diese Seite erlauben');}};
   rec.start();}catch(e){}}
 function stop(){try{rec&&rec.stop();}catch(e){}running=false;ui();}
-btn.onclick=e=>{e.stopPropagation();on=!on;try{localStorage.setItem('mo-stimme',on?'an':'aus');}catch(x){}if(on){start();show('Mavio','Sprachsteuerung an – sag „Mavio …“',3200);}else{stop();show('Mavio','Sprachsteuerung aus');}};
+btn.onclick=e=>{e.stopPropagation();on=!on;try{localStorage.setItem('mo-stimme',on?'an':'aus');}catch(x){}if(on){start();pillShow('Mavio','Sprachsteuerung an – sag „Mavio …“');}else{stop();awakeUntil=0;pillShow('Mavio','Sprachsteuerung aus');}};
 /* Browser verlangen einmal eine Berührung, bevor das Mikrofon starten darf */
 const kick=()=>{if(on&&!running)start();};['pointerdown','keydown','touchstart'].forEach(t=>addEventListener(t,kick,{capture:true,passive:true}));
 setInterval(ui,500);start();
+window.__mavioVoice={run,onText,isAwake:awake};
 })();
 </script>
 </body></html>
