@@ -506,7 +506,7 @@ body.in .talk{z-index:22}
 <script>
 /* Reihenfolge: Kerberos zuerst, danach immer abwechselnd – das einzige eckige Motiv (Gold-Relief) steht zwischen frei stehenden Figuren. */
 const S=[
- {k:'Mavio Opus',kind:'start',sub:'Willkommen',L:'M',d:'Ankauf, Projektierung, Sanierung und Verkauf. Jede Wohnung ein Einzelstück.',fig:'kerberos.webp',room:'raum1.jpg'},
+ {k:'Mavio Opus',kind:'start',sub:'Kennenlernen',L:'M',d:'Wer wir sind.',btn:'Kennenlernen',fig:'kerberos.webp',room:'raum1.jpg'},
  {k:'Referenzen',kind:'refs',sub:'Ausgewählte Projekte',L:'R',d:'Was wir gebaut haben – vorher und nachher.',fig:'atlas.webp',room:'raum2.jpg'},
  {k:'Materialien',kind:'mat',sub:'Zum Auswählen',L:'M',d:'Parkett, Fliesen, Marmor, Stuck, Bad und Türen.',fig:'adler.webp',room:'raum3.jpg'},
  {k:'Gestaltung',kind:'design',sub:'Einzelstücke',L:'G',d:'Marmor, Parkett, Stuck und Bad. Jede Wohnung ein Einzelstück.',fig:'relief.webp',room:'raum4.jpg',gold:1},
@@ -549,7 +549,7 @@ addEventListener('keydown',e=>{if(/INPUT|TEXTAREA|SELECT/.test(e.target.tagName)
   if(e.key==='ArrowRight')go(Math.round(tgt)+1);if(e.key==='ArrowLeft')go(Math.round(tgt)-1);});
 
 function setCur(i){if(i===cur)return;const first=cur<0,dir=i>cur?1:-1;cur=i;const s=S[i];
-  const c=$('cap');c.innerHTML=`<span class="ini">${s.L}</span><h1>${s.k}</h1><p>${s.d}</p><button>Öffnen</button>`;
+  const c=$('cap');c.innerHTML=`<span class="ini">${s.L}</span><h1>${s.k}</h1><p>${s.d}</p><button>${s.btn||'Öffnen'}</button>`;
   c.querySelector('button').onclick=e=>openDetail(s,e);c.classList.remove('rise');void c.offsetWidth;c.classList.add('rise');
   [...bars.children].forEach((b,k)=>b.classList.toggle('on',k===i));$('prev').style.opacity=i?1:.3;$('next').style.opacity=i<N-1?1:.3;if(!first)sweep(dir);}
 
@@ -635,7 +635,7 @@ try{$('mk').innerHTML=outlined('A',9);}catch(e){}
 
 /* Flächen */
 const scrim=$('scrim');
-function openDetail(s,e){pulse=1;if(window.MO&&MO.kunde){MO.kunde(s);return;}}
+function openDetail(s,e){pulse=1;if(s&&s.kind==='start'&&window.MOIntro){MOIntro.open();return;}if(window.MO&&MO.kunde){MO.kunde(s);return;}}
 function closeAll(){document.querySelectorAll('.sheet').forEach(s=>s.classList.remove('open'));scrim.classList.remove('on');}
 document.querySelectorAll('[data-close]').forEach(b=>b.onclick=closeAll);scrim.onclick=closeAll;
 function openChat(focus){$('chat').classList.add('open');scrim.classList.add('on');if(focus)setTimeout(()=>$('ask').focus(),400);}
@@ -1089,4 +1089,5 @@ setInterval(ui,500);start();
 window.__mavioVoice={run,onText,isAwake:awake};
 })();
 </script>
+<script type="module" src="intro/intro.js"></script>
 </body></html>
