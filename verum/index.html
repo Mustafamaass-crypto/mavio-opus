@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Verum</title>
+<meta name="robots" content="noindex">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Verum">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#081A37">
+<link rel="apple-touch-icon" href="/verum/apple-touch-icon.png">
+<link rel="icon" href="/verum/icon-192.png">
+<link rel="manifest" href="/verum/manifest.webmanifest">
+<style>
+  :root{color-scheme:dark}
+  *{box-sizing:border-box}
+  html,body{margin:0;min-height:100%}
+  body{background:#081A37 radial-gradient(900px 600px at 70% -10%,#1C3F78 0%,transparent 60%);color:#fff;font:17px/1.45 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100vh;padding:28px 22px calc(28px + env(safe-area-inset-bottom,0px));text-align:center}
+  img.logo{width:120px;height:120px;border-radius:26px;box-shadow:0 10px 40px rgba(0,0,0,.45),0 0 40px rgba(241,221,164,.25)}
+  h1{font-size:26px;margin:18px 0 6px;letter-spacing:.02em}
+  p{margin:6px 0;color:#C9D4EA}
+  .steps{margin:22px 0 10px;text-align:left;max-width:380px;width:100%;display:flex;flex-direction:column;gap:12px}
+  .step{display:flex;gap:12px;align-items:flex-start;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.16);border-radius:16px;padding:14px}
+  .num{flex:none;width:32px;height:32px;border-radius:50%;background:linear-gradient(135deg,#F1DDA4,#F5A800);color:#0A1E3F;font-weight:800;display:grid;place-items:center}
+  .step b{color:#fff}
+  .share{display:inline-block;vertical-align:-4px;width:20px;height:20px}
+  a.btn{display:inline-block;margin-top:18px;padding:14px 22px;border-radius:14px;background:linear-gradient(135deg,#F1DDA4,#F5A800);color:#0A1E3F;font-weight:800;text-decoration:none}
+  .arrow{position:fixed;bottom:calc(10px + env(safe-area-inset-bottom,0px));left:50%;transform:translateX(-50%);font-size:34px;animation:bob 1.2s ease-in-out infinite}
+  @keyframes bob{50%{transform:translate(-50%,8px)}}
+  .spin{width:34px;height:34px;border:4px solid rgba(255,255,255,.2);border-top-color:#F1DDA4;border-radius:50%;animation:sp 1s linear infinite;margin:18px auto 0}
+  @keyframes sp{to{transform:rotate(360deg)}}
+  [hidden]{display:none!important}
+</style>
+</head>
+<body>
+  <img class="logo" src="/verum/icon-512.png" alt="Verum Qualitas">
+
+  <!-- Wird angezeigt, wenn das Symbol vom Home-Bildschirm geöffnet wird -->
+  <section id="app" hidden>
+    <h1>Verum Board</h1>
+    <p>Wird geöffnet …</p>
+    <div class="spin"></div>
+    <a class="btn" id="go2" href="https://claude.ai/artifact/5AtuAXZVebY4rBERZj5EDk">Board öffnen</a>
+  </section>
+
+  <!-- Wird beim Einrichten in Safari angezeigt -->
+  <section id="setup">
+    <h1>Verum als App</h1>
+    <p>Nur noch 3 Mal tippen:</p>
+    <div class="steps">
+      <div class="step"><span class="num">1</span><span>Tippe ganz unten auf das <b>Teilen-Symbol</b> <svg class="share" viewBox="0 0 24 24" fill="none" stroke="#F1DDA4" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12M8 7l4-4 4 4"/><path d="M6 11v9h12v-9"/></svg> (Quadrat mit Pfeil nach oben). Siehst du es nicht, tippe unten rechts auf <b>„···“</b> und dann auf <b>„Teilen“</b>.</span></div>
+      <div class="step"><span class="num">2</span><span>Etwas nach unten wischen und <b>„Zum Home-Bildschirm“</b> antippen.</span></div>
+      <div class="step"><span class="num">3</span><span>Falls ein Schalter <b>„Als Web-App öffnen“</b> erscheint: anlassen. Dann oben rechts auf <b>„Hinzufügen“</b> tippen. Fertig – das VQ-Symbol liegt jetzt auf deinem Home-Bildschirm.</span></div>
+    </div>
+    <p style="font-size:14px">Danach einfach das neue VQ-Symbol antippen.</p>
+    <div class="arrow" aria-hidden="true">↓</div>
+  </section>
+
+<script>
+  var BOARD = 'https://claude.ai/artifact/5AtuAXZVebY4rBERZj5EDk';
+  var standalone = window.navigator.standalone === true || (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches);
+  if (standalone || /[?&]app=1/.test(location.search)) {
+    document.getElementById('setup').hidden = true;
+    document.getElementById('app').hidden = false;
+    setTimeout(function(){ location.replace(BOARD + (location.hash || '')); }, 400);
+  }
+</script>
+</body>
+</html>
