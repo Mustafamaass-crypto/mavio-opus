@@ -1007,8 +1007,8 @@ return {kunde:s=>kunde(s),search,searchEnter,setMode,get mode(){return MODE;}};
 const SR=window.SpeechRecognition||window.webkitSpeechRecognition,btn=document.getElementById('voiceBtn'),pill=document.getElementById('vpill');
 if(!SR||!btn)return;btn.hidden=false;
 const WINDOW=15000;
-let on=true,rec=null,running=false,awakeUntil=0,done=0,deb=null,lastRun='',lastRunAt=0,tick=null;
-try{on=localStorage.getItem('mo-stimme')!=='aus';}catch(e){}
+let on=false,rec=null,running=false,awakeUntil=0,done=0,deb=null,lastRun='',lastRunAt=0,tick=null;
+/* Sprachsteuerung startet IMMER ausgeschaltet – nur per Antippen des Mikrofon-Knopfs an. */
 const WAKE=/\b(mavio|mavi|maveo|mabio|navio|mario|marvio|maviu|mavyo|mavie|may vio|ma vio|mavio s)\b/;
 const norm=s=>s.toLowerCase().normalize('NFC').replace(/[.,!?;:„“"'()]/g,' ').replace(/\s+/g,' ').trim();
 const awake=()=>Date.now()<awakeUntil;
@@ -1075,17 +1075,22 @@ function onText(full){
     if(r.length){lastRun=key;lastRunAt=Date.now();wake();listening('✓ '+r.join(' · '));}
     else{wake();listening('Nicht verstanden: „'+cmd+'“');}
   },850);}
-function start(){if(!on||running)return;try{rec=new SR();rec.lang='de-DE';rec.continuous=true;rec.interimResults=true;rec.maxAlternatives=1;done=0;
+function start(){if(!on||running||document.hidden)return;try{rec=new SR();rec.lang='de-DE';rec.continuous=true;rec.interimResults=true;rec.maxAlternatives=1;done=0;
   rec.onresult=e=>{let full='';for(let i=0;i<e.results.length;i++)full+=e.results[i][0].transcript+' ';onText(full);};
   rec.onstart=()=>{running=true;ui();};
-  rec.onend=()=>{running=false;done=0;ui();if(on)setTimeout(start,250);};
+  rec.onend=()=>{running=false;done=0;ui();if(on&&!document.hidden)setTimeout(start,250);};
   rec.onerror=e=>{if(e.error==='not-allowed'||e.error==='service-not-allowed'){on=false;ui();pillShow('Mikrofon','Bitte das Mikrofon für diese Seite erlauben');}};
   rec.start();}catch(e){}}
-function stop(){try{rec&&rec.stop();}catch(e){}running=false;ui();}
-btn.onclick=e=>{e.stopPropagation();on=!on;try{localStorage.setItem('mo-stimme',on?'an':'aus');}catch(x){}if(on){start();pillShow('Mavio','Sprachsteuerung an – sag „Mavio …“');}else{stop();awakeUntil=0;pillShow('Mavio','Sprachsteuerung aus');}};
-/* Browser verlangen einmal eine Berührung, bevor das Mikrofon starten darf */
-const kick=()=>{if(on&&!running)start();};['pointerdown','keydown','touchstart'].forEach(t=>addEventListener(t,kick,{capture:true,passive:true}));
-setInterval(ui,500);start();
+function stop(){const r=rec;rec=null;try{if(r){r.onend=null;r.onresult=null;r.abort();}}catch(e){}running=false;done=0;ui();}
+/* Mikrofon sofort freigeben, sobald die App geschlossen/in den Hintergrund geht (sonst bleibt am iPhone oben das orange Mikrofon) –
+   beim Zurückkehren bleibt es aus, bis man wieder auf das Mikrofon-Symbol tippt. */
+function off(){on=false;stop();awakeUntil=0;status();ui();}
+function bg(){if(document.hidden)off();}
+document.addEventListener('visibilitychange',bg);
+addEventListener('pagehide',off);
+addEventListener('blur',()=>{setTimeout(()=>{if(document.hidden)off();},200);});
+btn.onclick=e=>{e.stopPropagation();on=!on;if(on){start();pillShow('Mavio','Sprachsteuerung an – sag „Mavio …“');}else{stop();awakeUntil=0;pillShow('Mavio','Sprachsteuerung aus');}};
+setInterval(ui,500);ui();
 window.__mavioVoice={run,onText,isAwake:awake};
 })();
 </script>
